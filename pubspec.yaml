@@ -1,61 +1,29 @@
-name: Build Universal APK
+name: tasbih
+description: "A Digital Tasbih App"
+publish_to: 'none'
+version: 1.0.0+1
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+environment:
+  sdk: ^3.5.0
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  vibration: ^2.0.1
+  url_launcher: ^6.3.0
 
-    steps:
-      - name: Checkout Repository Code
-        uses: actions/checkout@v4
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Scaffold Complete Flutter Project
-        run: |
-          cd ..
-          flutter create --org com.ahm --project-name tasbih temp_app
-          cp -r Tasbih/lib/* temp_app/lib/
-          cp -r Tasbih/assets temp_app/
-          cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
-          
-          # Inject vibration permission
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.VIBRATE"/>' temp_app/android/app/src/main/AndroidManifest.xml
-          
-          # Configure debug signing for release build
-          sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
-          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' temp_app/android/app/build.gradle 2>/dev/null || true
-
-      - name: Install Dependencies
-        run: |
-          cd ../temp_app
-          flutter pub get
-
-      - name: Generate App Icons
-        run: |
-          cd ../temp_app
-          flutter pub run flutter_launcher_icons
-
-      - name: Build Universal Release APK
-        run: |
-          cd ../temp_app
-          flutter build apk --release --split-per-abi=false
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tasbih-Release-APK
-          path: ../temp_app/build/app/outputs/flutter-apk/app-release.apk
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/app_icon.png
