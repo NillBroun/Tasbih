@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository Code
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -24,17 +24,32 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Scaffold Complete Flutter Project
+        run: |
+          cd ..
+          flutter create --org com.ahm --project-name tasbih temp_app
+          cp -r Tasbih/lib/* temp_app/lib/
+          cp -r Tasbih/assets temp_app/
+          cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
+          cd temp_app
+
       - name: Install Dependencies
-        run: flutter pub get
+        run: |
+          cd ../temp_app
+          flutter pub get
 
       - name: Generate App Icons
-        run: flutter pub run flutter_launcher_icons
+        run: |
+          cd ../temp_app
+          flutter pub run flutter_launcher_icons
 
       - name: Build Universal Release APK
-        run: flutter build apk --release
+        run: |
+          cd ../temp_app
+          flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Tasbih-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: ../temp_app/build/app/outputs/flutter-apk/app-release.apk
