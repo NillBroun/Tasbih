@@ -52,7 +52,7 @@ jobs:
       - name: Build Universal Release APK
         run: |
           cd ../temp_app
-          flutter build apk --release --split-per-abi=false
+          flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
