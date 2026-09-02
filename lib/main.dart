@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
@@ -160,7 +159,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
     await prefs.setBool('vibration_on', isVibrationOn);
   }
 
-  void _incrementCounter() async {
+  void _incrementCounter() {
     setState(() {
       dhikrList[currentIndex].count++;
       dhikrList[currentIndex].total++;
@@ -172,11 +171,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
 
     if (isVibrationOn) {
       if (dhikrList[currentIndex].count % targetCount == 0) {
-        if (await Vibration.hasVibrator() ?? false) {
-          Vibration.vibrate(duration: 350);
-        } else {
-          HapticFeedback.heavyImpact();
-        }
+        HapticFeedback.heavyImpact();
       } else {
         HapticFeedback.lightImpact();
       }
