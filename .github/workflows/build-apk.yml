@@ -31,7 +31,13 @@ jobs:
           cp -r Tasbih/lib/* temp_app/lib/
           cp -r Tasbih/assets temp_app/
           cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
-          cd temp_app
+          
+          # Inject vibration permission
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.VIBRATE"/>' temp_app/android/app/src/main/AndroidManifest.xml
+          
+          # Configure debug signing for release build
+          sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
+          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' temp_app/android/app/build.gradle 2>/dev/null || true
 
       - name: Install Dependencies
         run: |
@@ -46,7 +52,7 @@ jobs:
       - name: Build Universal Release APK
         run: |
           cd ../temp_app
-          flutter build apk --release
+          flutter build apk --release --split-per-abi=false
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
