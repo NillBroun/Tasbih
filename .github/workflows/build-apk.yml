@@ -34,10 +34,6 @@ jobs:
           
           # Inject vibration permission
           sed -i '/<application/i \    <uses-permission android:name="android.permission.VIBRATE"/>' temp_app/android/app/src/main/AndroidManifest.xml
-          
-          # Configure debug signing for release build
-          sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
-          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' temp_app/android/app/build.gradle 2>/dev/null || true
 
       - name: Install Dependencies
         run: |
@@ -49,13 +45,13 @@ jobs:
           cd ../temp_app
           flutter pub run flutter_launcher_icons
 
-      - name: Build Universal Release APK
+      - name: Build Universal APK
         run: |
           cd ../temp_app
-          flutter build apk --release
+          flutter build apk --debug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Tasbih-Release-APK
-          path: ../temp_app/build/app/outputs/flutter-apk/app-release.apk
+          name: Tasbih-APK
+          path: ../temp_app/build/app/outputs/flutter-apk/app-debug.apk
