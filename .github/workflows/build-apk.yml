@@ -24,16 +24,13 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Scaffold Complete Flutter Project
+      - name: Scaffold Flutter Project
         run: |
           cd ..
           flutter create --org com.ahm --project-name tasbih temp_app
           cp -r Tasbih/lib/* temp_app/lib/
           cp -r Tasbih/assets temp_app/
           cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
-          
-          # Inject vibration permission
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.VIBRATE"/>' temp_app/android/app/src/main/AndroidManifest.xml
 
       - name: Install Dependencies
         run: |
@@ -48,7 +45,7 @@ jobs:
       - name: Build Universal APK
         run: |
           cd ../temp_app
-          flutter build apk --debug
+          flutter build apk --debug -v
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
