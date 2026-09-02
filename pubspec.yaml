@@ -32,10 +32,10 @@ jobs:
           cp -r Tasbih/assets temp_app/
           cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
           
-          # ভাইব্রেশন পারমিশন ইনজেক্ট করা
+          # Inject vibration permission
           sed -i '/<application/i \    <uses-permission android:name="android.permission.VIBRATE"/>' temp_app/android/app/src/main/AndroidManifest.xml
           
-          # রিলিজের জন্য ডিবাগ সাইনিং যুক্ত করা (বিল্ড ফেইল হওয়া বন্ধ করতে)
+          # Configure debug signing for release build
           sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
           sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' temp_app/android/app/build.gradle 2>/dev/null || true
 
