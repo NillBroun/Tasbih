@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -135,7 +137,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
     }
 
     setState(() {
-      currentIndex = (prefs.getInt('current_index') ?? 0).clamp(0, dhikrList.length - 1);
+      currentIndex = (prefs.getInt('current_index') ?? 0).clamp(0, dhikrList.isNotEmpty ? dhikrList.length - 1 : 0);
       targetCount = prefs.getInt('target_count') ?? 33;
       isSoundOn = prefs.getBool('sound_on') ?? true;
     });
@@ -150,13 +152,29 @@ class _TasbihScreenState extends State<TasbihScreen> {
     await prefs.setBool('sound_on', isSoundOn);
   }
 
-  void _playSound() {
+  void _playSound({bool isTargetReached = false}) {
     if (!isSoundOn) return;
-    if (dhikrList[currentIndex].count % targetCount == 0) {
+    if (isTargetReached) {
       SystemSound.play(SystemSoundType.alert);
     } else {
       SystemSound.play(SystemSoundType.click);
     }
+  }
+
+  void _nextDhikr() {
+    if (dhikrList.isEmpty) return;
+    setState(() {
+      currentIndex = (currentIndex + 1) % dhikrList.length;
+    });
+    _saveData();
+  }
+
+  void _previousDhikr() {
+    if (dhikrList.isEmpty) return;
+    setState(() {
+      currentIndex = (currentIndex - 1 + dhikrList.length) % dhikrList.length;
+    });
+    _saveData();
   }
 
   void _incrementCounter() {
@@ -167,7 +185,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
       dailyHistory[today] = (dailyHistory[today] ?? 0) + 1;
     });
 
-    _playSound();
+    final isTargetReached = (dhikrList[currentIndex].count % targetCount == 0);
+    _playSound(isTargetReached: isTargetReached);
     _saveData();
   }
 
@@ -258,6 +277,101 @@ class _TasbihScreenState extends State<TasbihScreen> {
               }
             },
             child: const Text('Set', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportBackup() async {
+    final backupData = {
+      'dhikr_list': dhikrList.map((e) => e.toMap()).toList(),
+      'daily_history': dailyHistory,
+      'target_count': targetCount,
+      'app': 'Tasbih',
+      'developer': 'AHM',
+    };
+    await Clipboard.setData(ClipboardData(text: jsonEncode(backupData)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Backup code copied to clipboard successfully!'),
+          backgroundColor: Color(0xFF00B074),
+        ),
+      );
+    }
+  }
+
+  void _showRestoreDialog() {
+    final textController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF222428),
+        title: const Text('Restore Backup', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Paste your backup code below to restore your data:',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: textController,
+              maxLines: 4,
+              style: const TextStyle(fontSize: 12, color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'Paste backup JSON here...',
+                hintStyle: TextStyle(color: Colors.white30),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
+            onPressed: () {
+              try {
+                final Map<String, dynamic> decoded = jsonDecode(textController.text.trim());
+                if (decoded.containsKey('dhikr_list')) {
+                  final List list = decoded['dhikr_list'];
+                  setState(() {
+                    dhikrList = list.map((e) => DhikrItem.fromMap(e)).toList();
+                    currentIndex = 0;
+                    if (decoded.containsKey('target_count')) {
+                      targetCount = decoded['target_count'];
+                    }
+                    if (decoded.containsKey('daily_history')) {
+                      dailyHistory = Map<String, int>.from(decoded['daily_history']);
+                    }
+                  });
+                  _saveData();
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('All data restored successfully!'),
+                      backgroundColor: Color(0xFF00B074),
+                    ),
+                  );
+                } else {
+                  throw Exception();
+                }
+              } catch (_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Invalid backup code!'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            child: const Text('Restore', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -511,7 +625,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
               const Text('Settings & Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 10),
               SwitchListTile(
-                title: const Text('Sound', style: TextStyle(color: Colors.white)),
+                title: const Text('Sound Feedback', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Plays click tone on count', style: TextStyle(color: Colors.white38, fontSize: 12)),
                 secondary: Icon(isSoundOn ? Icons.volume_up : Icons.volume_off, color: Colors.lightBlueAccent),
                 value: isSoundOn,
                 onChanged: (val) {
@@ -524,10 +639,28 @@ class _TasbihScreenState extends State<TasbihScreen> {
               ListTile(
                 leading: const Icon(Icons.bar_chart_rounded, color: Colors.amberAccent),
                 title: const Text('History & Statistics', style: TextStyle(color: Colors.white)),
-                subtitle: const Text('View daily & weekly logs', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                subtitle: const Text('View daily & weekly activity', style: TextStyle(color: Colors.white54, fontSize: 12)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showHistoryModal();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cloud_upload_outlined, color: Colors.tealAccent),
+                title: const Text('Backup Data', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Copy backup code to clipboard', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _exportBackup();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cloud_download_outlined, color: Colors.greenAccent),
+                title: const Text('Restore Data', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Import from backup code', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showRestoreDialog();
                 },
               ),
               ListTile(
@@ -601,7 +734,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentDhikr = dhikrList[currentIndex];
+    final currentDhikr = dhikrList.isNotEmpty ? dhikrList[currentIndex] : DhikrItem(id: '0', title: 'Empty', arabic: '', meaning: '');
 
     return Scaffold(
       appBar: AppBar(
@@ -620,12 +753,11 @@ class _TasbihScreenState extends State<TasbihScreen> {
           children: [
             GestureDetector(
               onVerticalDragEnd: (details) {
-                if (details.primaryVelocity! < 0 && currentIndex < dhikrList.length - 1) {
-                  setState(() => currentIndex++);
-                } else if (details.primaryVelocity! > 0 && currentIndex > 0) {
-                  setState(() => currentIndex--);
+                if (details.primaryVelocity! < 0) {
+                  _nextDhikr();
+                } else if (details.primaryVelocity! > 0) {
+                  _previousDhikr();
                 }
-                _saveData();
               },
               child: Container(
                 width: double.infinity,
@@ -642,13 +774,15 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_upward, size: 18, color: Colors.white38),
-                          onPressed: currentIndex > 0 ? () => setState(() => currentIndex--) : null,
+                          icon: const Icon(Icons.arrow_upward, size: 18, color: Colors.white54),
+                          tooltip: 'Previous Dhikr',
+                          onPressed: _previousDhikr,
                         ),
                         Text(currentDhikr.title, style: const TextStyle(color: Color(0xFF00B074), fontWeight: FontWeight.bold, fontSize: 16)),
                         IconButton(
-                          icon: const Icon(Icons.arrow_downward, size: 18, color: Colors.white38),
-                          onPressed: currentIndex < dhikrList.length - 1 ? () => setState(() => currentIndex++) : null,
+                          icon: const Icon(Icons.arrow_downward, size: 18, color: Colors.white54),
+                          tooltip: 'Next Dhikr',
+                          onPressed: _nextDhikr,
                         ),
                       ],
                     ),
