@@ -1,4 +1,4 @@
-name: Build Universal APK
+name: Build Universal Release APK
 
 on:
   push:
@@ -32,6 +32,14 @@ jobs:
           cp -r Tasbih/assets temp_app/
           cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
 
+          # Configure minSdk 21 for 100% Android device compatibility
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
+          sed -i 's/minSdk = .*/minSdk = 21/g' temp_app/android/app/build.gradle 2>/dev/null || true
+
+          # Configure debug signing for release build
+          sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
+          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' temp_app/android/app/build.gradle 2>/dev/null || true
+
       - name: Install Dependencies
         run: |
           cd ../temp_app
@@ -42,14 +50,14 @@ jobs:
           cd ../temp_app
           flutter pub run flutter_launcher_icons
 
-      - name: Build Universal APK
+      - name: Build Universal Release APK
         run: |
           cd ../temp_app
-          flutter build apk --debug
-          cp build/app/outputs/flutter-apk/app-debug.apk $GITHUB_WORKSPACE/Tasbih.apk
+          flutter build apk --release --no-tree-shake-icons
+          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/Tasbih-Universal.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Tasbih-APK
-          path: Tasbih.apk
+          name: Tasbih-Universal-APK
+          path: Tasbih-Universal.apk
