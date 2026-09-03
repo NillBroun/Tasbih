@@ -32,6 +32,9 @@ jobs:
           cp -r Tasbih/assets temp_app/
           cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
 
+          # App Name Capitalization (tasbih -> Tasbih)
+          sed -i 's/android:label="tasbih"/android:label="Tasbih"/g' temp_app/android/app/src/main/AndroidManifest.xml
+
           # Configure minSdk 21 for 100% Android device compatibility
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
           sed -i 's/minSdk = .*/minSdk = 21/g' temp_app/android/app/build.gradle 2>/dev/null || true
