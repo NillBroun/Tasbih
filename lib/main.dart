@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:home_widget/home_widget.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +45,89 @@ class DhikrItem {
   );
 }
 
+class HijriCalculator {
+  static const List<String> hijriMonths = [
+    "Muharram", "Safar", "Rabi' al-Awwal", "Rabi' al-Thani",
+    "Jumada al-Awwal", "Jumada al-Thani", "Rajab", "Sha'ban",
+    "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
+  ];
+
+  static Map<String, dynamic> calculate(DateTime date, int offsetDays) {
+    // Islamic date changes at Maghrib (approx 18:00 / 6 PM local)
+    int maghribHour = 18;
+    int maghribMinute = 15;
+    bool isAfterMaghrib = (date.hour > maghribHour) ||
+        (date.hour == maghribHour && date.minute >= maghribMinute);
+
+    DateTime adjusted = date.add(Duration(days: offsetDays + (isAfterMaghrib ? 1 : 0)));
+
+    int day = adjusted.day;
+    int month = adjusted.month;
+    int year = adjusted.year;
+
+    int m = month;
+    int y = year;
+    if (m < 3) {
+      y -= 1;
+      m += 12;
+    }
+
+    int a = (y / 100).floor();
+    int b = 2 - a + (a / 4).floor();
+    int jd = (365.25 * (y + 4716)).floor() + (30.6001 * (m + 1)).floor() + day + b - 1524;
+
+    int l = jd - 1948440 + 10632;
+    int n = ((l - 1) / 10631).floor();
+    l = l - 10631 * n + 354;
+    int j = ((10985 - l) / 5316).floor() * ((50 * l) / 17719).floor() +
+        (l / 5670).floor() * ((43 * l) / 15238).floor();
+    l = l - ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
+        (j / 16).floor() * ((15238 * j) / 43).floor() + 29;
+    int hMonth = ((24 * l) / 709).floor();
+    int hDay = l - ((709 * hMonth) / 24).floor();
+    int hYear = 30 * n + j - 30;
+
+    String monthName = (hMonth >= 1 && hMonth <= 12) ? hijriMonths[hMonth - 1] : "Hijri";
+
+    return {
+      'day': hDay,
+      'month': monthName,
+      'year': hYear,
+      'isNight': isAfterMaghrib || date.hour < 5,
+      'formatted': "$hDay $monthName $hYear AH"
+    };
+  }
+}
+
+class SalahForbiddenTime {
+  static Map<String, dynamic> checkStatus(DateTime now) {
+    int curMin = now.hour * 60 + now.minute;
+
+    // Approximate solar events (can be localized)
+    // 1. Sunrise forbidden time: 05:40 - 06:00 (approx 20 mins)
+    int sunriseStart = 5 * 60 + 40;
+    int sunriseEnd = 6 * 60 + 0;
+
+    // 2. Zawwal (Zenith) forbidden time: 11:45 - 12:00 (approx 15 mins)
+    int zawwalStart = 11 * 60 + 45;
+    int zawwalEnd = 12 * 60 + 0;
+
+    // 3. Sunset (Ifrar) forbidden time: 17:55 - 18:15 (approx 20 mins)
+    int sunsetStart = 17 * 60 + 55;
+    int sunsetEnd = 18 * 60 + 15;
+
+    if (curMin >= sunriseStart && curMin <= sunriseEnd) {
+      return {'isForbidden': true, 'title': 'Sunrise (No Salah)', 'reason': 'Forbidden prayer time'};
+    } else if (curMin >= zawwalStart && curMin <= zawwalEnd) {
+      return {'isForbidden': true, 'title': 'Zawwal (No Salah)', 'reason': 'Forbidden prayer time'};
+    } else if (curMin >= sunsetStart && curMin <= sunsetEnd) {
+      return {'isForbidden': true, 'title': 'Sunset (No Salah)', 'reason': 'Forbidden prayer time'};
+    }
+
+    return {'isForbidden': false, 'title': 'Salah Open', 'reason': 'Normal time'};
+  }
+}
+
 class TasbihApp extends StatelessWidget {
   const TasbihApp({super.key});
 
@@ -71,7 +156,7 @@ class TasbihHomeScreen extends StatefulWidget {
   State<TasbihHomeScreen> createState() => _TasbihHomeScreenState();
 }
 
-class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
+class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBindingObserver {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<DhikrItem> _dhikrList = [];
@@ -81,12 +166,14 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
   bool _isSoundOn = true;
   bool _isVibrateOn = true;
   double _fontScale = 1.0;
+  int _hijriOffset = 0;
 
   Map<String, int> _dailyHistory = {};
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initAudio();
     _loadAllData();
   }
@@ -98,8 +185,17 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _audioPlayer.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _saveAllData();
+      _syncWidget();
+    }
   }
 
   String _getTodayKey() {
@@ -112,6 +208,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
     _isSoundOn = prefs.getBool('isSoundOn') ?? true;
     _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
     _fontScale = prefs.getDouble('fontScale') ?? 1.0;
+    _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
     _currentIndex = prefs.getInt('currentIndex') ?? 0;
     _currentCount = prefs.getInt('currentCount') ?? 0;
 
@@ -163,6 +260,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
     }
 
     setState(() {});
+    _syncWidget();
   }
 
   Future<void> _saveAllData() async {
@@ -170,10 +268,47 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
     await prefs.setBool('isSoundOn', _isSoundOn);
     await prefs.setBool('isVibrateOn', _isVibrateOn);
     await prefs.setDouble('fontScale', _fontScale);
+    await prefs.setInt('hijriOffset', _hijriOffset);
     await prefs.setInt('currentIndex', _currentIndex);
     await prefs.setInt('currentCount', _currentCount);
     await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
     await prefs.setString('dailyHistory', jsonEncode(_dailyHistory));
+  }
+
+  Future<void> _syncWidget() async {
+    try {
+      final now = DateTime.now();
+      final hijri = HijriCalculator.calculate(now, _hijriOffset);
+      final salah = SalahForbiddenTime.checkStatus(now);
+
+      final todayKey = _getTodayKey();
+      final todayTotal = _dailyHistory[todayKey] ?? 0;
+
+      await HomeWidget.saveWidgetData<int>('widget_today_count', todayTotal);
+      await HomeWidget.saveWidgetData<String>('widget_hijri_date', hijri['formatted']);
+      await HomeWidget.saveWidgetData<String>('widget_greg_date', "${_getDayName(now.weekday)}, ${now.day} ${_getMonthName(now.month)}");
+
+      String celestialIcon = hijri['isNight'] ? "🌙✨" : "☀️";
+      if (salah['isForbidden']) celestialIcon = "⛔";
+
+      await HomeWidget.saveWidgetData<String>('widget_celestial_icon', celestialIcon);
+      await HomeWidget.saveWidgetData<String>('widget_prayer_status', salah['title']);
+
+      await HomeWidget.updateWidget(
+        name: 'TasbihWidgetProvider',
+        androidName: 'TasbihWidgetProvider',
+      );
+    } catch (_) {}
+  }
+
+  String _getDayName(int day) {
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return days[(day - 1) % 7];
+  }
+
+  String _getMonthName(int month) {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return months[(month - 1) % 12];
   }
 
   void _onTapCounter() {
@@ -202,6 +337,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
     });
 
     _saveAllData();
+    _syncWidget();
   }
 
   void _resetCurrentCount() {
@@ -259,6 +395,167 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
       _currentCount = 0;
     });
     _saveAllData();
+  }
+
+  // Encrypted Backup Logic (ColorNote Style PIN / Password)
+  String _xorEncrypt(String text, String key) {
+    if (key.isEmpty) return text;
+    final textBytes = utf8.encode(text);
+    final keyBytes = utf8.encode(key);
+    final encrypted = List<int>.generate(textBytes.length, (i) {
+      return textBytes[i] ^ keyBytes[i % keyBytes.length];
+    });
+    return base64Encode(encrypted);
+  }
+
+  String _xorDecrypt(String base64Text, String key) {
+    if (key.isEmpty) return base64Text;
+    final encryptedBytes = base64Decode(base64Text);
+    final keyBytes = utf8.encode(key);
+    final decrypted = List<int>.generate(encryptedBytes.length, (i) {
+      return encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
+    });
+    return utf8.decode(decrypted);
+  }
+
+  void _showEncryptedBackupDialog() {
+    final pinCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF222428),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Backup with PIN / Password', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter a 4-digit PIN or password to secure your backup data (Optional):',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pinCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'PIN / Password',
+                hintStyle: TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Color(0xFF1E2024),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
+            onPressed: () {
+              final pin = pinCtrl.text.trim();
+              final rawJson = jsonEncode({
+                'dhikrList': _dhikrList.map((e) => e.toJson()).toList(),
+                'dailyHistory': _dailyHistory,
+                'hasPin': pin.isNotEmpty,
+              });
+
+              final encryptedData = pin.isNotEmpty ? "ENC:${_xorEncrypt(rawJson, pin)}" : rawJson;
+              Clipboard.setData(ClipboardData(text: encryptedData));
+
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Secure backup copied to clipboard!')),
+              );
+            },
+            child: const Text('Copy Backup', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEncryptedRestoreDialog() {
+    final pinCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF222428),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Restore Data', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Paste your backup from clipboard. If it was PIN protected, enter your PIN below:',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pinCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                hintText: 'PIN / Password (if protected)',
+                hintStyle: TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Color(0xFF1E2024),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
+            onPressed: () async {
+              final pin = pinCtrl.text.trim();
+              final clip = await Clipboard.getData(Clipboard.kTextPlain);
+              if (clip?.text == null) return;
+
+              try {
+                String text = clip!.text!.trim();
+                if (text.startsWith("ENC:")) {
+                  text = _xorDecrypt(text.substring(4), pin);
+                }
+                final decoded = jsonDecode(text);
+                if (decoded['dhikrList'] != null) {
+                  final List list = decoded['dhikrList'];
+                  _dhikrList = list.map((e) => DhikrItem.fromJson(e)).toList();
+                }
+                if (decoded['dailyHistory'] != null) {
+                  final Map<String, dynamic> hist = decoded['dailyHistory'];
+                  _dailyHistory = hist.map((k, v) => MapEntry(k, v as int));
+                }
+
+                setState(() {
+                  _currentIndex = 0;
+                  _currentCount = 0;
+                });
+                _saveAllData();
+                _syncWidget();
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Data restored successfully!')),
+                );
+              } catch (_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invalid backup or wrong PIN.')),
+                );
+              }
+            },
+            child: const Text('Restore', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openDhikrListModal() {
@@ -539,6 +836,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
                       },
                     ),
                     const Divider(color: Colors.white12),
+
+                    // Font Size Scale
                     ListTile(
                       title: const Text('Font Size Scaling', style: TextStyle(color: Colors.white)),
                       subtitle: Text('Current: ${(_fontScale * 100).toInt()}%', style: const TextStyle(color: Colors.white60, fontSize: 12)),
@@ -558,32 +857,52 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
                       },
                     ),
                     const Divider(color: Colors.white12),
+
+                    // Hijri Adjustment
+                    ListTile(
+                      title: const Text('Hijri Date Adjustment', style: TextStyle(color: Colors.white)),
+                      subtitle: Text('Moon Sighting Offset: ${_hijriOffset >= 0 ? "+$_hijriOffset" : "$_hijriOffset"} Days',
+                          style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [-2, -1, 0, 1, 2].map((offset) {
+                        final isSel = _hijriOffset == offset;
+                        return ChoiceChip(
+                          label: Text(offset == 0 ? "0" : (offset > 0 ? "+$offset" : "$offset")),
+                          selected: isSel,
+                          selectedColor: const Color(0xFF00B074),
+                          onSelected: (_) {
+                            setState(() => _hijriOffset = offset);
+                            setSettingsState(() {});
+                            _saveAllData();
+                            _syncWidget();
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const Divider(color: Colors.white12),
+
+                    // Last 7 Days Bars
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text('Last 7 Days Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                     _buildHistoryBars(),
                     const Divider(color: Colors.white12),
+
+                    // ColorNote Style Encrypted Backup & Restore
                     ListTile(
-                      leading: const Icon(Icons.copy_all, color: Color(0xFF00B074)),
-                      title: const Text('Backup Data to Clipboard', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('Copy all your dhikrs and history', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      onTap: () {
-                        final data = {
-                          'dhikrList': _dhikrList.map((e) => e.toJson()).toList(),
-                          'dailyHistory': _dailyHistory,
-                        };
-                        Clipboard.setData(ClipboardData(text: jsonEncode(data)));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Backup copied to clipboard!')),
-                        );
-                      },
+                      leading: const Icon(Icons.lock_outline, color: Color(0xFF00B074)),
+                      title: const Text('PIN Protected Backup', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Copy encrypted data to clipboard', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      onTap: () => _showEncryptedBackupDialog(),
                     ),
                     ListTile(
-                      leading: const Icon(Icons.settings_backup_restore, color: Color(0xFF00B074)),
-                      title: const Text('Restore Data from Clipboard', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('Paste and restore your saved progress', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      onTap: () => _restoreDataFromClipboard(),
+                      leading: const Icon(Icons.lock_open, color: Color(0xFF00B074)),
+                      title: const Text('Restore Protected Backup', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Paste encrypted data using PIN', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      onTap: () => _showEncryptedRestoreDialog(),
                     ),
                   ],
                 ),
@@ -645,36 +964,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
         }).toList(),
       ),
     );
-  }
-
-  Future<void> _restoreDataFromClipboard() async {
-    final clip = await Clipboard.getData(Clipboard.kTextPlain);
-    if (clip?.text == null) return;
-
-    try {
-      final decoded = jsonDecode(clip!.text!);
-      if (decoded['dhikrList'] != null) {
-        final List list = decoded['dhikrList'];
-        _dhikrList = list.map((e) => DhikrItem.fromJson(e)).toList();
-      }
-      if (decoded['dailyHistory'] != null) {
-        final Map<String, dynamic> hist = decoded['dailyHistory'];
-        _dailyHistory = hist.map((k, v) => MapEntry(k, v as int));
-      }
-      setState(() {
-        _currentIndex = 0;
-        _currentCount = 0;
-      });
-      _saveAllData();
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data restored successfully!')),
-      );
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid backup data format in clipboard.')),
-      );
-    }
   }
 
   void _showAboutDialog() {
@@ -744,6 +1033,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final hijri = HijriCalculator.calculate(now, _hijriOffset);
+    final salah = SalahForbiddenTime.checkStatus(now);
+
     final currentDhikr = _dhikrList.isNotEmpty
         ? _dhikrList[_currentIndex]
         : DhikrItem(title: "Tasbih", arabic: "سُبْحَانَ ٱللَّٰهِ", meaning: "Glory be to Allah", target: 33);
@@ -788,9 +1081,51 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> {
                 ),
               ),
 
-              // Dhikr Circular Card
+              // Dynamic Home Screen Hijri & Salah Status Pill Badge
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: salah['isForbidden']
+                        ? const Color(0xFFD32F2F).withOpacity(0.18)
+                        : const Color(0xFF222428),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: salah['isForbidden']
+                          ? const Color(0xFFD32F2F).withOpacity(0.4)
+                          : Colors.white12,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        salah['isForbidden'] ? "⛔" : (hijri['isNight'] ? "🌙✨" : "☀️"),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        hijri['formatted'],
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      if (salah['isForbidden']) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          "• ${salah['title']}",
+                          style: const TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Circular Dhikr Card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
