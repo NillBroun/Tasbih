@@ -1,5 +1,5 @@
 name: tasbih
-description: "A Digital Tasbih App"
+description: "A Minimalist & Spiritual Digital Tasbih App"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,6 +12,7 @@ dependencies:
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.0
   audioplayers: ^6.0.0
+  home_widget: ^0.7.0
 
 dev_dependencies:
   flutter_test:
