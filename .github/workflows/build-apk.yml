@@ -1,4 +1,4 @@
-name: Build Universal Release APK
+name: Build Universal APK
 
 on:
   push:
@@ -10,57 +10,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository Code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
 
-      - name: Scaffold Flutter Project
-        run: |
-          cd ..
-          flutter create --org com.ahm --project-name tasbih temp_app
-          cp -r Tasbih/lib/* temp_app/lib/
-          cp -r Tasbih/assets temp_app/
-          cp Tasbih/pubspec.yaml temp_app/pubspec.yaml
+    - name: Generate Click Audio Asset Automatically
+      run: |
+        mkdir -p assets/audio
+        python3 -c "
+        import wave, struct, math
+        sample_rate = 44100
+        duration = 0.035
+        n_samples = int(sample_rate * duration)
+        with wave.open('assets/audio/click.wav', 'w') as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(sample_rate)
+            for i in range(n_samples):
+                t = float(i) / sample_rate
+                val = math.sin(2.0 * math.pi * 1200.0 * t) * math.exp(-i / (sample_rate * 0.007))
+                sample = int(val * 32767)
+                f.writeframes(struct.pack('<h', max(-32768, min(32767, sample))))
+        "
 
-          # App Name Capitalization (tasbih -> Tasbih)
-          sed -i 's/android:label="tasbih"/android:label="Tasbih"/g' temp_app/android/app/src/main/AndroidManifest.xml
+    - name: Install dependencies
+      run: flutter pub get
 
-          # Configure minSdk 21 for 100% Android device compatibility
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
-          sed -i 's/minSdk = .*/minSdk = 21/g' temp_app/android/app/build.gradle 2>/dev/null || true
+    - name: Build Universal APK
+      run: flutter build apk --release --no-tree-shake-icons
 
-          # Configure debug signing for release build
-          sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/g' temp_app/android/app/build.gradle.kts 2>/dev/null || true
-          sed -i 's/signingConfig signingConfigs.release/signingConfig signingConfigs.debug/g' temp_app/android/app/build.gradle 2>/dev/null || true
-
-      - name: Install Dependencies
-        run: |
-          cd ../temp_app
-          flutter pub get
-
-      - name: Generate App Icons
-        run: |
-          cd ../temp_app
-          flutter pub run flutter_launcher_icons
-
-      - name: Build Universal Release APK
-        run: |
-          cd ../temp_app
-          flutter build apk --release --no-tree-shake-icons
-          cp build/app/outputs/flutter-apk/app-release.apk $GITHUB_WORKSPACE/Tasbih-Universal.apk
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tasbih-Universal-APK
-          path: Tasbih-Universal.apk
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Tasbih-Release-APK
+        path: build/app/outputs/flutter-apk/app-release.apk
