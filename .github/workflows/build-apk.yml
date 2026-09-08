@@ -173,7 +173,6 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # Dynamic Kotlin provider without any package R import dependency
           TARGET_DIR=$(find android/app/src/main/kotlin -type d -mindepth 2 | head -n 1)
           cat << 'EOF' > "$TARGET_DIR/TasbihWidgetProvider.kt"
           package es.antonborri.home_widget
@@ -271,19 +270,16 @@ jobs:
         run: |
           cd ../tasbih_fresh
 
-          cat << 'EOF' >> android/build.gradle.kts
-          subprojects {
-              tasks.withType<com.android.build.gradle.internal.tasks.AarMetadataTask>().configureEach {
-                  enabled = false
-              }
-          }
-          EOF
+          # Pre-create all expected metadata directories so BundleAar / Lint tasks are satisfied
+          PLUGINS=("audioplayers_android" "home_widget" "jni" "jni_flutter" "shared_preferences_android" "url_launcher_android")
+          for p in "${PLUGINS[@]}"; do
+            mkdir -p "build/$p/intermediates/aar_metadata_check/release/checkReleaseAarMetadata"
+            touch "build/$p/intermediates/aar_metadata_check/release/checkReleaseAarMetadata/aar-metadata.properties"
+          done
 
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease \
-            -x checkReleaseAarMetadata \
-            --no-daemon
+          ./gradlew :app:assembleRelease --no-daemon
 
           mkdir -p ../../Tasbih/build_output/
           find /home/runner/work/Tasbih -name "*.apk" -exec cp {} ../../Tasbih/build_output/app-release.apk \;
