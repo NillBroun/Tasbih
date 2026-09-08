@@ -57,7 +57,7 @@ jobs:
             cp -r ../Tasbih/assets/icon/* ./assets/icon/
           fi
 
-      - name: Inject Android Native Widget Files
+      - name: Inject Safe Android Native Widget Files
         run: |
           cd ../tasbih_fresh
 
@@ -173,49 +173,54 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
+          # Safe Native Kotlin Widget Provider that never crashes the app
           mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
           package com.ahm.tasbih
 
           import android.appwidget.AppWidgetManager
+          import android.appwidget.AppWidgetProvider
           import android.content.Context
           import android.content.SharedPreferences
           import android.widget.RemoteViews
-          import es.antonborri.home_widget.HomeWidgetProvider
 
-          class TasbihWidgetProvider : HomeWidgetProvider() {
+          class TasbihWidgetProvider : AppWidgetProvider() {
               override fun onUpdate(
                   context: Context,
                   appWidgetManager: AppWidgetManager,
-                  appWidgetIds: IntArray,
-                  widgetData: SharedPreferences
+                  appWidgetIds: IntArray
               ) {
-                  val pkg = context.packageName
-                  val layoutId = context.resources.getIdentifier("widget_layout", "layout", pkg)
-                  val countId = context.resources.getIdentifier("widget_count_text", "id", pkg)
-                  val hijriId = context.resources.getIdentifier("widget_hijri_date", "id", pkg)
-                  val gregId = context.resources.getIdentifier("widget_greg_date", "id", pkg)
-                  val iconId = context.resources.getIdentifier("widget_status_icon", "id", pkg)
-                  val titleId = context.resources.getIdentifier("widget_status_title", "id", pkg)
+                  try {
+                      val pkg = context.packageName
+                      val prefs: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
 
-                  if (layoutId == 0) return
+                      val layoutId = context.resources.getIdentifier("widget_layout", "layout", pkg)
+                      val countId = context.resources.getIdentifier("widget_count_text", "id", pkg)
+                      val hijriId = context.resources.getIdentifier("widget_hijri_date", "id", pkg)
+                      val gregId = context.resources.getIdentifier("widget_greg_date", "id", pkg)
+                      val iconId = context.resources.getIdentifier("widget_status_icon", "id", pkg)
+                      val titleId = context.resources.getIdentifier("widget_status_title", "id", pkg)
 
-                  appWidgetIds.forEach { widgetId ->
-                      val views = RemoteViews(pkg, layoutId).apply {
-                          val count = widgetData.getInt("widget_today_count", 0)
-                          val hijri = widgetData.getString("widget_hijri_date", "Hijri Date")
-                          val greg = widgetData.getString("widget_greg_date", "")
-                          val icon = widgetData.getString("widget_status_icon", "☀️")
-                          val title = widgetData.getString("widget_status_title", "Salah Open")
+                      if (layoutId == 0) return
 
-                          if (countId != 0) setTextViewText(countId, "Today: $count")
-                          if (hijriId != 0) setTextViewText(hijriId, hijri)
-                          if (gregId != 0) setTextViewText(gregId, greg)
-                          if (iconId != 0) setTextViewText(iconId, icon)
-                          if (titleId != 0) setTextViewText(titleId, title)
+                      for (widgetId in appWidgetIds) {
+                          val views = RemoteViews(pkg, layoutId)
+
+                          val count = prefs.getLong("flutter.widget_today_count", 0L)
+                          val hijri = prefs.getString("flutter.widget_hijri_date", "Hijri Date") ?: "Hijri Date"
+                          val greg = prefs.getString("flutter.widget_greg_date", "") ?: ""
+                          val icon = prefs.getString("flutter.widget_status_icon", "☀️") ?: "☀️"
+                          val title = prefs.getString("flutter.widget_status_title", "Salah Open") ?: "Salah Open"
+
+                          if (countId != 0) views.setTextViewText(countId, "Today: $count")
+                          if (hijriId != 0) views.setTextViewText(hijriId, hijri)
+                          if (gregId != 0) views.setTextViewText(gregId, greg)
+                          if (iconId != 0) views.setTextViewText(iconId, icon)
+                          if (titleId != 0) views.setTextViewText(titleId, title)
+
+                          appWidgetManager.updateAppWidget(widgetId, views)
                       }
-                      appWidgetManager.updateAppWidget(widgetId, views)
-                  }
+                  } catch (_: Exception) {}
               }
           }
           EOF
