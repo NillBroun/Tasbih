@@ -153,7 +153,7 @@ jobs:
                       android:id="@+id/widget_greg_date"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
-                      android:text="Gregorian Date"
+                      android:text="Date"
                       android:textColor="#AAAAAA"
                       android:textSize="9sp" />
               </LinearLayout>
@@ -173,14 +173,15 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          TARGET_DIR=$(find android/app/src/main/kotlin -type d -mindepth 2 | head -n 1)
-          cat << 'EOF' > "$TARGET_DIR/TasbihWidgetProvider.kt"
-          package es.antonborri.home_widget
+          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
+          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
+          package com.ahm.tasbih
 
           import android.appwidget.AppWidgetManager
           import android.content.Context
           import android.content.SharedPreferences
           import android.widget.RemoteViews
+          import es.antonborri.home_widget.HomeWidgetProvider
 
           class TasbihWidgetProvider : HomeWidgetProvider() {
               override fun onUpdate(
@@ -245,7 +246,7 @@ jobs:
           with open(p, 'r') as f:
               c = f.read()
           receiver_xml = '''
-              <receiver android:name=\"es.antonborri.home_widget.TasbihWidgetProvider\" android:exported=\"true\">
+              <receiver android:name=\"com.ahm.tasbih.TasbihWidgetProvider\" android:exported=\"true\">
                   <intent-filter>
                       <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
                   </intent-filter>
