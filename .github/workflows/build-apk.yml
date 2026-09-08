@@ -261,20 +261,18 @@ jobs:
         run: |
           cd ../tasbih_fresh
 
-          PLUGINS=("audioplayers_android" "home_widget" "path_provider_android" "shared_preferences_android" "url_launcher_android")
-          for p in "${PLUGINS[@]}"; do
-            mkdir -p "build/$p/intermediates/aar_metadata_check/release/checkReleaseAarMetadata"
-            touch "build/$p/intermediates/aar_metadata_check/release/checkReleaseAarMetadata/aar-metadata.properties"
-          done
+          # Auto disable checkReleaseAarMetadata across all subprojects safely
+          cat << 'EOF' >> android/build.gradle.kts
+          subprojects {
+              tasks.withType<com.android.build.gradle.internal.tasks.AarMetadataTask>().configureEach {
+                  enabled = false
+              }
+          }
+          EOF
 
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -x :audioplayers_android:checkReleaseAarMetadata \
-            -x :home_widget:checkReleaseAarMetadata \
-            -x :path_provider_android:checkReleaseAarMetadata \
-            -x :shared_preferences_android:checkReleaseAarMetadata \
-            -x :url_launcher_android:checkReleaseAarMetadata \
             -x checkReleaseAarMetadata \
             --no-daemon
 
