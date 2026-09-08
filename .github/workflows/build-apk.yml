@@ -270,10 +270,9 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -PskipDependencyChecks=true \
-            -x :app:ReleaseMinSdkCheck \
             -x :audioplayers_android:checkReleaseAarMetadata \
             -x :home_widget:checkReleaseAarMetadata \
+            -x :path_provider_android:checkReleaseAarMetadata \
             -x :shared_preferences_android:checkReleaseAarMetadata \
             -x :url_launcher_android:checkReleaseAarMetadata \
             -x checkReleaseAarMetadata \
