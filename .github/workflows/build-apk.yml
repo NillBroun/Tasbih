@@ -25,6 +25,17 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Recreate Android Project & Gradle Structure
+        run: |
+          flutter create --platforms=android --org com.ahm.tasbih .
+
+      - name: Ensure Dummy Click Audio Exists
+        run: |
+          mkdir -p assets/audio
+          if [ ! -f assets/audio/click.wav ]; then
+            echo "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" | base64 -d > assets/audio/click.wav
+          fi
+
       - name: Install Dependencies
         run: flutter pub get
 
