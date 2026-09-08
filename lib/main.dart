@@ -53,7 +53,6 @@ class HijriCalculator {
   ];
 
   static Map<String, dynamic> calculate(DateTime date, int offsetDays) {
-    // Islamic date changes at Maghrib (approx 18:00 / 6 PM local)
     int maghribHour = 18;
     int maghribMinute = 15;
     bool isAfterMaghrib = (date.hour > maghribHour) ||
@@ -103,16 +102,12 @@ class SalahForbiddenTime {
   static Map<String, dynamic> checkStatus(DateTime now) {
     int curMin = now.hour * 60 + now.minute;
 
-    // Approximate solar events (can be localized)
-    // 1. Sunrise forbidden time: 05:40 - 06:00 (approx 20 mins)
     int sunriseStart = 5 * 60 + 40;
     int sunriseEnd = 6 * 60 + 0;
 
-    // 2. Zawwal (Zenith) forbidden time: 11:45 - 12:00 (approx 15 mins)
     int zawwalStart = 11 * 60 + 45;
     int zawwalEnd = 12 * 60 + 0;
 
-    // 3. Sunset (Ifrar) forbidden time: 17:55 - 18:15 (approx 20 mins)
     int sunsetStart = 17 * 60 + 55;
     int sunsetEnd = 18 * 60 + 15;
 
@@ -157,7 +152,7 @@ class TasbihHomeScreen extends StatefulWidget {
 }
 
 class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBindingObserver {
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  AudioPlayer? _audioPlayer;
 
   List<DhikrItem> _dhikrList = [];
   int _currentIndex = 0;
@@ -174,19 +169,23 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initAudio();
+    _initAudioSafe();
     _loadAllData();
   }
 
-  void _initAudio() {
-    _audioPlayer.setPlayerMode(PlayerMode.lowLatency);
-    _audioPlayer.setSource(AssetSource('audio/click.wav'));
+  void _initAudioSafe() {
+    try {
+      _audioPlayer = AudioPlayer();
+      _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _audioPlayer.dispose();
+    try {
+      _audioPlayer?.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -204,75 +203,79 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   }
 
   Future<void> _loadAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isSoundOn = prefs.getBool('isSoundOn') ?? true;
-    _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
-    _fontScale = prefs.getDouble('fontScale') ?? 1.0;
-    _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
-    _currentIndex = prefs.getInt('currentIndex') ?? 0;
-    _currentCount = prefs.getInt('currentCount') ?? 0;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isSoundOn = prefs.getBool('isSoundOn') ?? true;
+      _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
+      _fontScale = prefs.getDouble('fontScale') ?? 1.0;
+      _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
+      _currentIndex = prefs.getInt('currentIndex') ?? 0;
+      _currentCount = prefs.getInt('currentCount') ?? 0;
 
-    final dhikrString = prefs.getString('dhikrList');
-    if (dhikrString != null) {
-      final List decoded = jsonDecode(dhikrString);
-      _dhikrList = decoded.map((e) => DhikrItem.fromJson(e)).toList();
-    } else {
-      _dhikrList = [
-        DhikrItem(
-          title: "Subhanallah",
-          arabic: "سُبْحَانَ ٱللَّٰهِ",
-          meaning: "Glory be to Allah",
-          target: 33,
-        ),
-        DhikrItem(
-          title: "Alhamdulillah",
-          arabic: "ٱلْحَمْدُ لِلَّٰهِ",
-          meaning: "Praise be to Allah",
-          target: 33,
-        ),
-        DhikrItem(
-          title: "Allahu Akbar",
-          arabic: "ٱللَّٰهُ أَكْبَرُ",
-          meaning: "Allah is the Greatest",
-          target: 34,
-        ),
-        DhikrItem(
-          title: "Kalima Tayyibah",
-          arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ",
-          meaning: "There is no god but Allah, Muhammad is the Messenger of Allah",
-          target: 100,
-        ),
-        DhikrItem(
-          title: "Astaghfirullah",
-          arabic: "أَسْتَغْفِرُ ٱللَّٰهَ",
-          meaning: "I seek forgiveness from Allah",
-          target: 100,
-        ),
-      ];
-    }
+      final dhikrString = prefs.getString('dhikrList');
+      if (dhikrString != null) {
+        final List decoded = jsonDecode(dhikrString);
+        _dhikrList = decoded.map((e) => DhikrItem.fromJson(e)).toList();
+      } else {
+        _dhikrList = [
+          DhikrItem(
+            title: "Subhanallah",
+            arabic: "سُبْحَانَ ٱللَّٰهِ",
+            meaning: "Glory be to Allah",
+            target: 33,
+          ),
+          DhikrItem(
+            title: "Alhamdulillah",
+            arabic: "ٱلْحَمْدُ لِلَّٰهِ",
+            meaning: "Praise be to Allah",
+            target: 33,
+          ),
+          DhikrItem(
+            title: "Allahu Akbar",
+            arabic: "ٱللَّٰهُ أَكْبَرُ",
+            meaning: "Allah is the Greatest",
+            target: 34,
+          ),
+          DhikrItem(
+            title: "Kalima Tayyibah",
+            arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ",
+            meaning: "There is no god but Allah, Muhammad is the Messenger of Allah",
+            target: 100,
+          ),
+          DhikrItem(
+            title: "Astaghfirullah",
+            arabic: "أَسْتَغْفِرُ ٱللَّٰهَ",
+            meaning: "I seek forgiveness from Allah",
+            target: 100,
+          ),
+        ];
+      }
 
-    if (_currentIndex >= _dhikrList.length) _currentIndex = 0;
+      if (_currentIndex >= _dhikrList.length) _currentIndex = 0;
 
-    final historyString = prefs.getString('dailyHistory');
-    if (historyString != null) {
-      final Map<String, dynamic> decoded = jsonDecode(historyString);
-      _dailyHistory = decoded.map((k, v) => MapEntry(k, v as int));
-    }
+      final historyString = prefs.getString('dailyHistory');
+      if (historyString != null) {
+        final Map<String, dynamic> decoded = jsonDecode(historyString);
+        _dailyHistory = decoded.map((k, v) => MapEntry(k, v as int));
+      }
 
-    setState(() {});
-    _syncWidget();
+      if (mounted) setState(() {});
+      _syncWidget();
+    } catch (_) {}
   }
 
   Future<void> _saveAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isSoundOn', _isSoundOn);
-    await prefs.setBool('isVibrateOn', _isVibrateOn);
-    await prefs.setDouble('fontScale', _fontScale);
-    await prefs.setInt('hijriOffset', _hijriOffset);
-    await prefs.setInt('currentIndex', _currentIndex);
-    await prefs.setInt('currentCount', _currentCount);
-    await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
-    await prefs.setString('dailyHistory', jsonEncode(_dailyHistory));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isSoundOn', _isSoundOn);
+      await prefs.setBool('isVibrateOn', _isVibrateOn);
+      await prefs.setDouble('fontScale', _fontScale);
+      await prefs.setInt('hijriOffset', _hijriOffset);
+      await prefs.setInt('currentIndex', _currentIndex);
+      await prefs.setInt('currentCount', _currentCount);
+      await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
+      await prefs.setString('dailyHistory', jsonEncode(_dailyHistory));
+    } catch (_) {}
   }
 
   Future<void> _syncWidget() async {
@@ -314,9 +317,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void _onTapCounter() {
     if (_dhikrList.isEmpty) return;
 
-    if (_isSoundOn) {
-      _audioPlayer.stop();
-      _audioPlayer.play(AssetSource('audio/click.wav'));
+    if (_isSoundOn && _audioPlayer != null) {
+      try {
+        _audioPlayer!.stop();
+        _audioPlayer!.play(AssetSource('audio/click.wav'));
+      } catch (_) {}
     }
 
     if (_isVibrateOn) {
@@ -397,7 +402,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     _saveAllData();
   }
 
-  // Encrypted Backup Logic (ColorNote Style PIN / Password)
   String _xorEncrypt(String text, String key) {
     if (key.isEmpty) return text;
     final textBytes = utf8.encode(text);
@@ -750,18 +754,18 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
             onPressed: () {
               final title = titleCtrl.text.trim();
               final arabic = arabicCtrl.text.trim();
-              final meaning = meaningCtrl.text.trim();
+              final practicalMeaning = meaningCtrl.text.trim();
               final target = int.tryParse(targetCtrl.text.trim()) ?? 33;
 
               if (title.isEmpty || arabic.isEmpty) return;
 
               setState(() {
                 if (item == null) {
-                  _dhikrList.add(DhikrItem(title: title, arabic: arabic, meaning: meaning, target: target));
+                  _dhikrList.add(DhikrItem(title: title, arabic: arabic, meaning: practicalMeaning, target: target));
                 } else if (index != null) {
                   _dhikrList[index].title = title;
                   _dhikrList[index].arabic = arabic;
-                  _dhikrList[index].meaning = meaning;
+                  _dhikrList[index].meaning = practicalMeaning;
                   _dhikrList[index].target = target;
                 }
               });
@@ -837,7 +841,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     ),
                     const Divider(color: Colors.white12),
 
-                    // Font Size Scale
                     ListTile(
                       title: const Text('Font Size Scaling', style: TextStyle(color: Colors.white)),
                       subtitle: Text('Current: ${(_fontScale * 100).toInt()}%', style: const TextStyle(color: Colors.white60, fontSize: 12)),
@@ -858,7 +861,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     ),
                     const Divider(color: Colors.white12),
 
-                    // Hijri Adjustment
                     ListTile(
                       title: const Text('Hijri Date Adjustment', style: TextStyle(color: Colors.white)),
                       subtitle: Text('Moon Sighting Offset: ${_hijriOffset >= 0 ? "+$_hijriOffset" : "$_hijriOffset"} Days',
@@ -883,7 +885,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     ),
                     const Divider(color: Colors.white12),
 
-                    // Last 7 Days Bars
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text('Last 7 Days Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -891,7 +892,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     _buildHistoryBars(),
                     const Divider(color: Colors.white12),
 
-                    // ColorNote Style Encrypted Backup & Restore
                     ListTile(
                       leading: const Icon(Icons.lock_outline, color: Color(0xFF00B074)),
                       title: const Text('PIN Protected Backup', style: TextStyle(color: Colors.white)),
@@ -1051,7 +1051,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
           onTap: _onTapCounter,
           child: Column(
             children: [
-              // Top Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
@@ -1081,7 +1080,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 ),
               ),
 
-              // Dynamic Home Screen Hijri & Salah Status Pill Badge
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                 child: Container(
@@ -1123,7 +1121,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
               const SizedBox(height: 8),
 
-              // Circular Dhikr Card
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -1189,7 +1186,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 ),
               ),
 
-              // Counter Circle Area
               Expanded(
                 child: Center(
                   child: Stack(
@@ -1232,7 +1228,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 ),
               ),
 
-              // Bottom Actions
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Row(
