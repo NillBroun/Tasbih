@@ -25,24 +25,31 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Recreate Android Project
+      - name: Recreate Android Project & Gradle Structure
         run: |
           flutter create --platforms=android --org com.ahm.tasbih .
 
-      - name: Set App Name to Tasbih
-        run: |
-          sed -i 's/android:label="tasbih"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
-
       - name: Install Dependencies
         run: flutter pub get
+
+      - name: Ensure Dummy Click Audio Exists
+        run: |
+          mkdir -p assets/audio
+          if [ ! -f assets/audio/click.wav ]; then
+            echo "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" | base64 -d > assets/audio/click.wav
+          fi
 
       - name: Generate App Launcher Icons
         run: |
           dart run flutter_launcher_icons
 
-      - name: Setup HomeWidget Native Files
+      - name: Configure Android App Label to Tasbih
         run: |
-          # 1. Widget Provider XML
+          sed -i 's/android:label="[^"]*"/android:label="Tasbih"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Setup HomeWidget Native Files & Drawables
+        run: |
+          # 1. Widget Provider XML metadata
           mkdir -p android/app/src/main/res/xml
           cat << 'EOF' > android/app/src/main/res/xml/tasbih_widget_info.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -55,7 +62,7 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # 2. Widget Drawables
+          # 2. Drawables
           mkdir -p android/app/src/main/res/drawable
           cat << 'EOF' > android/app/src/main/res/drawable/widget_capsule_normal.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -84,7 +91,7 @@ jobs:
           </shape>
           EOF
 
-          # 3. Widget Layout
+          # 3. Widget Layout XML
           mkdir -p android/app/src/main/res/layout
           cat << 'EOF' > android/app/src/main/res/layout/tasbih_widget_layout.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -176,7 +183,7 @@ jobs:
           </LinearLayout>
           EOF
 
-          # 4. Kotlin Widget Provider
+          # 4. Kotlin Widget Provider with explicit R import
           mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
           package com.ahm.tasbih
@@ -187,6 +194,7 @@ jobs:
           import android.content.SharedPreferences
           import android.graphics.Color
           import android.widget.RemoteViews
+          import com.ahm.tasbih.R
 
           class TasbihWidgetProvider : AppWidgetProvider() {
               override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -232,13 +240,6 @@ jobs:
           # 5. Inject Receiver into AndroidManifest.xml
           RECEIVER_BLOCK='<receiver android:name=".TasbihWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"\/><\/intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml\/tasbih_widget_info"\/><\/receiver>'
           sed -i "s/<\/application>/$RECEIVER_BLOCK<\/application>/" android/app/src/main/AndroidManifest.xml
-
-      - name: Ensure Dummy Click Audio Exists
-        run: |
-          mkdir -p assets/audio
-          if [ ! -f assets/audio/click.wav ]; then
-            echo "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" | base4 -d > assets/audio/click.wav || true
-          fi
 
       - name: Build Universal Release APK
         run: flutter build apk --release
