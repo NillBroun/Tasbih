@@ -45,30 +45,49 @@ class DhikrItem {
   );
 }
 
+class CityPreset {
+  final String name;
+  final double lat;
+  final double lng;
+
+  const CityPreset(this.name, this.lat, this.lng);
+}
+
 class SolarCalculator {
-  // গাণিতিক সৌর অ্যালগরিদম (বিশ্বের যে কোনো স্থানের জন্য প্রযোজ্য)
-  static Map<String, int> getTimes(DateTime date, {double lat = 23.8103, double lng = 90.4125}) {
+  static const List<CityPreset> globalCities = [
+    CityPreset("Makkah, KSA", 21.4225, 39.8262),
+    CityPreset("Madinah, KSA", 24.4672, 39.6111),
+    CityPreset("Riyadh, KSA", 24.7136, 46.6753),
+    CityPreset("Jeddah, KSA", 21.5433, 39.1728),
+    CityPreset("Dubai, UAE", 25.2048, 55.2708),
+    CityPreset("Dhaka, Bangladesh", 23.8103, 90.4125),
+    CityPreset("Chittagong, Bangladesh", 22.3569, 91.7832),
+    CityPreset("Sylhet, Bangladesh", 24.8949, 91.8687),
+    CityPreset("Rajshahi, Bangladesh", 24.3745, 88.6042),
+    CityPreset("Khulna, Bangladesh", 22.8456, 89.5403),
+    CityPreset("London, UK", 51.5074, -0.1278),
+    CityPreset("New York, USA", 40.7128, -74.0060),
+    CityPreset("Kuala Lumpur, Malaysia", 3.1390, 101.6869),
+    CityPreset("Jakarta, Indonesia", -6.2088, 106.8456),
+    CityPreset("Custom (Manual Coordinates)", 0.0, 0.0),
+  ];
+
+  static Map<String, int> getTimes(DateTime date, {required double lat, required double lng}) {
     int dayOfYear = int.parse("${date.difference(DateTime(date.year, 1, 1)).inDays + 1}");
     double b = 2 * pi * (dayOfYear - 81) / 365.0;
     
-    // সময়ের সমীকরণ (মিনিট)
     double eot = 9.87 * sin(2 * b) - 7.53 * cos(b) - 1.5 * sin(b);
-    // সৌর বিষুব (ডিগ্রি)
     double declination = 23.45 * sin(2 * pi * (284 + dayOfYear) / 365.0);
     double declRad = declination * pi / 180.0;
     double latRad = lat * pi / 180.0;
 
     double tzOffsetHours = date.timeZoneOffset.inMinutes / 60.0;
-    // স্থানীয় সৌর মধ্যাহ্ন (মিনিট)
     double solarNoonMin = 720.0 - (lng * 4.0) - eot + (tzOffsetHours * 60.0);
 
-    // সূর্যোদয় ও সূর্যাস্তের কোণ হিসাব (-0.833 ডিগ্রি)
     double cosHa = (sin(-0.833 * pi / 180.0) - sin(latRad) * sin(declRad)) / (cos(latRad) * cos(declRad));
     cosHa = cosHa.clamp(-1.0, 1.0);
-    double haDeg = acos(cosHa) * 180.0 / pi;
-    double haMin = haDeg * 4.0;
+    double haMin = acos(cosHa) * 180.0 / pi * 4.0;
 
-    // ফজরের কোণ হিসাব (-18 ডিগ্রি)
     double cosFajr = (sin(-18.0 * pi / 180.0) - sin(latRad) * sin(declRad)) / (cos(latRad) * cos(declRad));
     cosFajr = cosFajr.clamp(-1.0, 1.0);
     double fajrMin = acos(cosFajr) * 180.0 / pi * 4.0;
@@ -77,8 +96,8 @@ class SolarCalculator {
     int sunset = (solarNoonMin + haMin).round();
     int noon = solarNoonMin.round();
     int fajr = (solarNoonMin - fajrMin).round();
-    int sehriEnd = fajr - 3; // সতর্কতামূলক ৩ মিনিট পূর্বে সমাপ্তি
-    int iftar = sunset + 1;  // ১ মিনিট সতর্কতামূলক সেফটি মার্জিন
+    int sehriEnd = fajr - 3;
+    int iftar = sunset + 1;
 
     return {
       'sehriEnd': sehriEnd,
@@ -98,7 +117,7 @@ class SolarCalculator {
     return "$displayH:${min.toString().padLeft(2, '0')} $period";
   }
 
-  static Map<String, dynamic> evaluateStatus(DateTime now, {double lat = 23.8103, double lng = 90.4125}) {
+  static Map<String, dynamic> evaluateStatus(DateTime now, {required double lat, required double lng}) {
     final times = getTimes(now, lat: lat, lng: lng);
     int cur = now.hour * 60 + now.minute;
 
@@ -108,70 +127,55 @@ class SolarCalculator {
     int sunset = times['sunset']!;
     int iftar = times['iftar']!;
 
-    // ১. হারাম সময় (লাল সংকেত - কোড: 2)
-    // সূর্যোদয়: শুরু থেকে পরবর্তী ১৮ মিনিট
     if (cur >= sunrise && cur < sunrise + 18) {
       return {
         'statusType': 2,
         'icon': '⛔',
         'title': 'Sunrise (No Salah)',
-        'badgeColor': 'red',
         'isForbidden': true,
       };
     }
-    // যাওয়াল: দ্বিপ্রহরের পূর্বের ১২ মিনিট
     if (cur >= noon - 12 && cur < noon) {
       return {
         'statusType': 2,
         'icon': '⛔',
         'title': 'Zawwal (No Salah)',
-        'badgeColor': 'red',
         'isForbidden': true,
       };
     }
-    // সূর্যাস্ত: অস্ত যাওয়ার পূর্বের ১৫ মিনিট
     if (cur >= sunset - 15 && cur < sunset) {
       return {
         'statusType': 2,
         'icon': '⛔',
         'title': 'Sunset (No Salah)',
-        'badgeColor': 'red',
         'isForbidden': true,
       };
     }
 
-    // ২. ইফতারের সময় (সবুজ সংকেত - কোড: 1)
-    // সূর্যাস্তের পর থেকে মাগরিবের প্রথম ৩০ মিনিট
     if (cur >= iftar && cur < iftar + 35) {
       return {
         'statusType': 1,
         'icon': '🍽️',
         'title': 'Iftar Now (${formatMin(iftar)})',
-        'badgeColor': 'green',
         'isForbidden': false,
       };
     }
 
-    // ৩. সেহরি সমাপ্তির ১ ঘণ্টা পূর্বের কাউন্টডাউন (সবুজ সংকেত - কোড: 1)
     if (cur >= sehriEnd - 60 && cur <= sehriEnd) {
       int left = sehriEnd - cur;
       return {
         'statusType': 1,
         'icon': '🥣',
         'title': left <= 20 ? 'Sehri: ${left}m left' : 'Sehri Ends ${formatMin(sehriEnd)}',
-        'badgeColor': 'green',
         'isForbidden': false,
       };
     }
 
-    // ৪. সাধারণ সময় (স্বাভাবিক সংকেত - কোড: 0)
-    // আসরের পর থেকে ইফতারের আগ পর্যন্ত সময় দেখানো
     if (cur >= noon + 240 && cur < sunset - 15) {
       return {
         'statusType': 0,
         'icon': '🌇',
         'title': 'Iftar: ${formatMin(iftar)}',
-        'badgeColor': 'dark',
         'isForbidden': false,
       };
     }
@@ -181,7 +185,6 @@ class SolarCalculator {
       'statusType': 0,
       'icon': isNight ? '🌙' : '☀️',
       'title': 'Salah Open',
-      'badgeColor': 'dark',
       'isForbidden': false,
     };
   }
@@ -276,6 +279,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   bool _isVibrateOn = true;
   double _fontScale = 1.0;
   int _hijriOffset = 0;
+
+  String _cityName = "Dhaka, Bangladesh";
   double _userLat = 23.8103;
   double _userLng = 90.4125;
 
@@ -325,8 +330,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
       _fontScale = prefs.getDouble('fontScale') ?? 1.0;
       _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
+
+      _cityName = prefs.getString('cityName') ?? "Dhaka, Bangladesh";
       _userLat = prefs.getDouble('userLat') ?? 23.8103;
       _userLng = prefs.getDouble('userLng') ?? 90.4125;
+
       _currentIndex = prefs.getInt('currentIndex') ?? 0;
       _currentCount = prefs.getInt('currentCount') ?? 0;
 
@@ -364,8 +372,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       await prefs.setBool('isVibrateOn', _isVibrateOn);
       await prefs.setDouble('fontScale', _fontScale);
       await prefs.setInt('hijriOffset', _hijriOffset);
+
+      await prefs.setString('cityName', _cityName);
       await prefs.setDouble('userLat', _userLat);
       await prefs.setDouble('userLng', _userLng);
+
       await prefs.setInt('currentIndex', _currentIndex);
       await prefs.setInt('currentCount', _currentCount);
       await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
@@ -389,7 +400,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
       await HomeWidget.saveWidgetData<String>('widget_status_icon', status['icon']);
       await HomeWidget.saveWidgetData<String>('widget_status_title', status['title']);
-      await HomeWidget.saveWidgetData<int>('widget_status_type', status['statusType']); // 0=dark, 1=green, 2=red
+      await HomeWidget.saveWidgetData<int>('widget_status_type', status['statusType']);
 
       await HomeWidget.updateWidget(
         name: 'TasbihWidgetProvider',
@@ -656,6 +667,126 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     );
   }
 
+  void _openLocationDialog(StateSetter setSettingsState) {
+    final latCtrl = TextEditingController(text: _userLat.toString());
+    final lngCtrl = TextEditingController(text: _userLng.toString());
+    String selectedCity = _cityName;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF222428),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Select Location (Offline)', style: TextStyle(color: Colors.white, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Choose your city from list or enter coordinates manually for accurate prayer & Iftar times:',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1B1E),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: DropdownButton<String>(
+                    value: SolarCalculator.globalCities.any((c) => c.name == selectedCity)
+                        ? selectedCity
+                        : "Custom (Manual Coordinates)",
+                    isExpanded: true,
+                    dropdownColor: const Color(0xFF222428),
+                    underline: const SizedBox(),
+                    items: SolarCalculator.globalCities.map((c) {
+                      return DropdownMenuItem<String>(
+                        value: c.name,
+                        child: Text(c.name, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setDlgState(() {
+                        selectedCity = val;
+                        final preset = SolarCalculator.globalCities.firstWhere((element) => element.name == val);
+                        if (preset.name != "Custom (Manual Coordinates)") {
+                          latCtrl.text = preset.lat.toString();
+                          lngCtrl.text = preset.lng.toString();
+                        }
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Latitude (অক্ষাংশ):', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: latCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. 24.4672 (Madinah)',
+                    filled: true,
+                    fillColor: Color(0xFF1A1B1E),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Longitude (দ্রাঘিমাংশ):', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: lngCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. 39.6111 (Madinah)',
+                    filled: true,
+                    fillColor: Color(0xFF1A1B1E),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
+              onPressed: () {
+                final double? parsedLat = double.tryParse(latCtrl.text.trim());
+                final double? parsedLng = double.tryParse(lngCtrl.text.trim());
+
+                if (parsedLat != null && parsedLng != null) {
+                  setState(() {
+                    _cityName = selectedCity;
+                    _userLat = parsedLat;
+                    _userLng = parsedLng;
+                  });
+                  setSettingsState(() {});
+                  _saveAllData();
+                  _syncWidget();
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Location updated: $_cityName')),
+                  );
+                }
+              },
+              child: const Text('Save Location', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openDhikrListModal() {
     showModalBottomSheet(
       context: context,
@@ -911,6 +1042,16 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    ListTile(
+                      leading: const Icon(Icons.location_on, color: Color(0xFF00B074)),
+                      title: const Text('Prayer & Iftar Location', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: Text('$_cityName (${_userLat.toStringAsFixed(2)}, ${_userLng.toStringAsFixed(2)})',
+                          style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
+                      onTap: () => _openLocationDialog(setSettingsState),
+                    ),
+                    const Divider(color: Colors.white12),
+
                     SwitchListTile(
                       activeColor: const Color(0xFF00B074),
                       title: const Text('Sound Feedback', style: TextStyle(color: Colors.white)),
@@ -1155,12 +1296,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     Color badgeText = Colors.white70;
 
     if (status['statusType'] == 1) {
-      // সবুজ সংকেত (সেহরি বা ইফতার)
       badgeBg = const Color(0xFF00B074).withOpacity(0.2);
       badgeBorder = const Color(0xFF00B074).withOpacity(0.5);
       badgeText = const Color(0xFF00B074);
     } else if (status['statusType'] == 2) {
-      // লাল সংকেত (হারাম সময়)
       badgeBg = const Color(0xFFD32F2F).withOpacity(0.2);
       badgeBorder = const Color(0xFFD32F2F).withOpacity(0.5);
       badgeText = Colors.redAccent;
