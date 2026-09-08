@@ -54,6 +54,7 @@ class CountryPreset {
 }
 
 class SolarCalculator {
+  // Global Country Database in pure English
   static const List<CountryPreset> worldCountries = [
     CountryPreset("Afghanistan", 34.5553, 69.2075),
     CountryPreset("Albania", 41.3275, 19.8187),
@@ -154,6 +155,7 @@ class SolarCalculator {
     cosFajr = cosFajr.clamp(-1.0, 1.0);
     double fajrMin = acos(cosFajr) * 180.0 / pi * 4.0;
 
+    // Apply manual local offset across all astronomical nodes
     int sunrise = (solarNoonMin - haMin).round() + offsetMin;
     int sunset = (solarNoonMin + haMin).round() + offsetMin;
     int noon = solarNoonMin.round() + offsetMin;
@@ -189,6 +191,7 @@ class SolarCalculator {
     int sunset = times['sunset']!;
     int iftar = times['iftar']!;
 
+    // Forbidden prayer periods (Red badge)
     if (cur >= sunrise && cur < sunrise + 18) {
       return {
         'statusType': 2,
@@ -214,6 +217,7 @@ class SolarCalculator {
       };
     }
 
+    // Iftar time (Green badge)
     if (cur >= iftar && cur < iftar + 35) {
       return {
         'statusType': 1,
@@ -223,6 +227,7 @@ class SolarCalculator {
       };
     }
 
+    // Sehri 60-minute countdown (Green badge)
     if (cur >= sehriEnd - 60 && cur <= sehriEnd) {
       int left = sehriEnd - cur;
       return {
@@ -233,6 +238,7 @@ class SolarCalculator {
       };
     }
 
+    // Afternoon status until Sunset
     if (cur >= noon + 240 && cur < sunset - 15) {
       return {
         'statusType': 0,
@@ -345,7 +351,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   String _countryName = "Bangladesh";
   double _userLat = 23.8103;
   double _userLng = 90.4125;
-  int _districtOffsetMin = 0;
+  int _districtOffsetMin = 0; // ±30 mins manual offset
 
   Map<String, int> _dailyHistory = {};
 
@@ -547,6 +553,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     } catch (_) {}
   }
 
+  // Instant widget sync with exact HomeWidget provider path
   Future<void> _syncWidget() async {
     try {
       final now = DateTime.now();
@@ -563,11 +570,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
       await HomeWidget.saveWidgetData<String>('widget_status_icon', status['icon']);
       await HomeWidget.saveWidgetData<String>('widget_status_title', status['title']);
-      await HomeWidget.saveWidgetData<int>('widget_status_type', status['statusType']);
 
       await HomeWidget.updateWidget(
         name: 'TasbihWidgetProvider',
-        androidName: 'TasbihWidgetProvider',
+        androidName: 'es.antonborri.home_widget.TasbihWidgetProvider',
       );
     } catch (_) {}
   }
@@ -864,7 +870,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     autofocus: false,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Search country...',
+                      hintText: 'Search country (e.g., India, Pakistan, Saudi Arabia)...',
                       hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                       prefixIcon: const Icon(Icons.search, color: Color(0xFF00B074)),
                       filled: true,
@@ -895,7 +901,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             _countryName = country.name;
                             _userLat = country.lat;
                             _userLng = country.lng;
-                            _districtOffsetMin = 0;
+                            _districtOffsetMin = 0; // Reset offset on new country
                           });
                           setSettingsState(() {});
                           _saveAllData();
@@ -1187,6 +1193,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    // 1. Country Selection
                     ListTile(
                       leading: const Icon(Icons.public, color: Color(0xFF00B074)),
                       title: const Text('Country / Region', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1196,6 +1203,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     ),
                     const Divider(color: Colors.white12),
 
+                    // 2. District / Local Time Offset (+/- 30 mins) with instant auto-sync to Widget
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Column(
@@ -1227,7 +1235,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _syncWidget(); // Instantly update widget calculations
                                     }
                                   },
                                 ),
@@ -1260,7 +1268,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _syncWidget(); // Instantly update widget calculations
                                     }
                                   },
                                 ),
