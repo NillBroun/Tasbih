@@ -45,34 +45,97 @@ class DhikrItem {
   );
 }
 
-class CityPreset {
+class CountryPreset {
   final String name;
   final double lat;
   final double lng;
 
-  const CityPreset(this.name, this.lat, this.lng);
+  const CountryPreset(this.name, this.lat, this.lng);
 }
 
 class SolarCalculator {
-  static const List<CityPreset> globalCities = [
-    CityPreset("Makkah, KSA", 21.4225, 39.8262),
-    CityPreset("Madinah, KSA", 24.4672, 39.6111),
-    CityPreset("Riyadh, KSA", 24.7136, 46.6753),
-    CityPreset("Jeddah, KSA", 21.5433, 39.1728),
-    CityPreset("Dubai, UAE", 25.2048, 55.2708),
-    CityPreset("Dhaka, Bangladesh", 23.8103, 90.4125),
-    CityPreset("Chittagong, Bangladesh", 22.3569, 91.7832),
-    CityPreset("Sylhet, Bangladesh", 24.8949, 91.8687),
-    CityPreset("Rajshahi, Bangladesh", 24.3745, 88.6042),
-    CityPreset("Khulna, Bangladesh", 22.8456, 89.5403),
-    CityPreset("London, UK", 51.5074, -0.1278),
-    CityPreset("New York, USA", 40.7128, -74.0060),
-    CityPreset("Kuala Lumpur, Malaysia", 3.1390, 101.6869),
-    CityPreset("Jakarta, Indonesia", -6.2088, 106.8456),
-    CityPreset("Custom (Manual Coordinates)", 0.0, 0.0),
+  // বিশ্বের প্রতিটি প্রধান দেশের তালিকা (হালকা মেমরি আর্কিটেকচার)
+  static const List<CountryPreset> worldCountries = [
+    CountryPreset("Afghanistan (আফগানিস্তান)", 34.5553, 69.2075),
+    CountryPreset("Albania (আলবেনিয়া)", 41.3275, 19.8187),
+    CountryPreset("Algeria (আলজেরিয়া)", 36.7538, 3.0588),
+    CountryPreset("Argentina (আর্জেন্টিনা)", -34.6037, -58.3816),
+    CountryPreset("Australia (অস্ট্রেলিয়া)", -35.2809, 149.1300),
+    CountryPreset("Austria (অস্ট্রিয়া)", 48.2082, 16.3738),
+    CountryPreset("Azerbaijan (আজারবাইজান)", 40.4093, 49.8671),
+    CountryPreset("Bahrain (বাহরাইন)", 26.2285, 50.5860),
+    CountryPreset("Bangladesh (বাংলাদেশ)", 23.8103, 90.4125),
+    CountryPreset("Belgium (বেলজিয়াম)", 50.8503, 4.3517),
+    CountryPreset("Bosnia and Herzegovina (বসনিয়া)", 43.8563, 18.4131),
+    CountryPreset("Brazil (ব্রাজিল)", -15.7975, -47.8919),
+    CountryPreset("Brunei (ব্রুনাই)", 4.9031, 114.9398),
+    CountryPreset("Canada (কানাডা)", 45.4215, -75.6972),
+    CountryPreset("China (চীন)", 39.9042, 116.4074),
+    CountryPreset("Cyprus (সাইপ্রাস)", 35.1856, 33.3823),
+    CountryPreset("Denmark (ডেনমার্ক)", 55.6761, 12.5683),
+    CountryPreset("Egypt (মিশর)", 30.0444, 31.2357),
+    CountryPreset("Finland (ফিনল্যান্ড)", 60.1699, 24.9384),
+    CountryPreset("France (ফ্রান্স)", 48.8566, 2.3522),
+    CountryPreset("Germany (জার্মানি)", 52.5200, 13.4050),
+    CountryPreset("Ghana (ঘানা)", 5.6037, -0.1870),
+    CountryPreset("Greece (গ্রিস)", 37.9838, 23.7275),
+    CountryPreset("Hong Kong (হংকং)", 22.3193, 114.1694),
+    CountryPreset("India (ভারত)", 28.6139, 77.2090),
+    CountryPreset("Indonesia (ইন্দোনেশিয়া)", -6.2088, 106.8456),
+    CountryPreset("Iran (ইরান)", 35.6892, 51.3890),
+    CountryPreset("Iraq (ইরাক)", 33.3152, 44.3661),
+    CountryPreset("Ireland (আয়ারল্যান্ড)", 53.3498, -6.2603),
+    CountryPreset("Italy (ইতালি)", 41.9028, 12.4964),
+    CountryPreset("Japan (জাপান)", 35.6762, 139.6503),
+    CountryPreset("Jordan (জর্ডান)", 31.9454, 35.9284),
+    CountryPreset("Kazakhstan (কাজাখস্তান)", 51.1694, 71.4491),
+    CountryPreset("Kenya (কেনিয়া)", -1.2921, 36.8219),
+    CountryPreset("Kuwait (কুয়েত)", 29.3759, 47.9774),
+    CountryPreset("Kyrgyzstan (কিরগিজস্তান)", 42.8746, 74.5698),
+    CountryPreset("Lebanon (লেবানন)", 33.8938, 35.5018),
+    CountryPreset("Libya (লিবিয়া)", 32.8872, 13.1913),
+    CountryPreset("Malaysia (মালয়েশিয়া)", 3.1390, 101.6869),
+    CountryPreset("Maldives (মালদ্বীপ)", 4.1755, 73.5093),
+    CountryPreset("Morocco (মরক্কো)", 34.0209, -6.8416),
+    CountryPreset("Myanmar (মিয়ানমার)", 19.7633, 96.0785),
+    CountryPreset("Nepal (নেপাল)", 27.7172, 85.3240),
+    CountryPreset("Netherlands (নেদারল্যান্ডস)", 52.3676, 4.9041),
+    CountryPreset("New Zealand (নিউজিল্যান্ড)", -41.2865, 174.7762),
+    CountryPreset("Nigeria (নাইজেরিয়া)", 9.0765, 7.3986),
+    CountryPreset("Norway (নরওয়ে)", 59.9139, 10.7522),
+    CountryPreset("Oman (ওমান)", 23.5859, 58.4059),
+    CountryPreset("Pakistan (পাকিস্তান)", 33.6844, 73.0479),
+    CountryPreset("Palestine (ফিলিস্তিন)", 31.7683, 35.2137),
+    CountryPreset("Philippines (ফিলিপাইন)", 14.5995, 120.9842),
+    CountryPreset("Poland (পোল্যান্ড)", 52.2297, 21.0122),
+    CountryPreset("Portugal (পর্তুগাল)", 38.7223, -9.1393),
+    CountryPreset("Qatar (কাতার)", 25.2854, 51.5310),
+    CountryPreset("Russia (রাশিয়া)", 55.7558, 37.6173),
+    CountryPreset("Saudi Arabia (সৌদি আরব)", 24.7136, 46.6753),
+    CountryPreset("Singapore (সিঙ্গাপুর)", 1.3521, 103.8198),
+    CountryPreset("South Africa (দক্ষিণ আফ্রিকা)", -25.7479, 28.2293),
+    CountryPreset("South Korea (দক্ষিণ কোরিয়া)", 37.5665, 126.9780),
+    CountryPreset("Spain (স্পেন)", 40.4168, -3.7038),
+    CountryPreset("Sri Lanka (শ্রীলঙ্কা)", 6.9271, 79.8612),
+    CountryPreset("Sudan (সুদান)", 15.5007, 32.5599),
+    CountryPreset("Sweden (সুইডেন)", 59.3293, 18.0686),
+    CountryPreset("Switzerland (সুইজারল্যান্ড)", 46.9480, 7.4474),
+    CountryPreset("Syria (সিরিয়া)", 33.5138, 36.2765),
+    CountryPreset("Taiwan (তাইওয়ান)", 25.0330, 121.5654),
+    CountryPreset("Tajikistan (তাজিকিস্তান)", 38.5598, 68.7870),
+    CountryPreset("Thailand (থাইল্যান্ড)", 13.7563, 100.5018),
+    CountryPreset("Tunisia (তিউনিসিয়া)", 36.8065, 10.1815),
+    CountryPreset("Turkey (তুরস্ক)", 39.9334, 32.8597),
+    CountryPreset("Turkmenistan (তুর্কমেনিস্তান)", 37.9601, 58.3261),
+    CountryPreset("Uganda (উগান্ডা)", 0.3476, 32.5825),
+    CountryPreset("United Arab Emirates (ইউএই)", 24.4539, 54.3773),
+    CountryPreset("United Kingdom (যুক্তরাজ্য)", 51.5074, -0.1278),
+    CountryPreset("United States (আমেরিকা)", 38.9072, -77.0369),
+    CountryPreset("Uzbekistan (উজবেকিস্তান)", 41.2995, 69.2401),
+    CountryPreset("Yemen (ইয়েমেন)", 15.3694, 44.1910),
   ];
 
-  static Map<String, int> getTimes(DateTime date, {required double lat, required double lng}) {
+  static Map<String, int> getTimes(DateTime date, {required double lat, required double lng, int offsetMin = 0}) {
     int dayOfYear = int.parse("${date.difference(DateTime(date.year, 1, 1)).inDays + 1}");
     double b = 2 * pi * (dayOfYear - 81) / 365.0;
     
@@ -92,10 +155,10 @@ class SolarCalculator {
     cosFajr = cosFajr.clamp(-1.0, 1.0);
     double fajrMin = acos(cosFajr) * 180.0 / pi * 4.0;
 
-    int sunrise = (solarNoonMin - haMin).round();
-    int sunset = (solarNoonMin + haMin).round();
-    int noon = solarNoonMin.round();
-    int fajr = (solarNoonMin - fajrMin).round();
+    int sunrise = (solarNoonMin - haMin).round() + offsetMin;
+    int sunset = (solarNoonMin + haMin).round() + offsetMin;
+    int noon = solarNoonMin.round() + offsetMin;
+    int fajr = (solarNoonMin - fajrMin).round() + offsetMin;
     int sehriEnd = fajr - 3;
     int iftar = sunset + 1;
 
@@ -117,8 +180,8 @@ class SolarCalculator {
     return "$displayH:${min.toString().padLeft(2, '0')} $period";
   }
 
-  static Map<String, dynamic> evaluateStatus(DateTime now, {required double lat, required double lng}) {
-    final times = getTimes(now, lat: lat, lng: lng);
+  static Map<String, dynamic> evaluateStatus(DateTime now, {required double lat, required double lng, int offsetMin = 0}) {
+    final times = getTimes(now, lat: lat, lng: lng, offsetMin: offsetMin);
     int cur = now.hour * 60 + now.minute;
 
     int sehriEnd = times['sehriEnd']!;
@@ -280,9 +343,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   double _fontScale = 1.0;
   int _hijriOffset = 0;
 
-  String _cityName = "Dhaka, Bangladesh";
+  String _countryName = "Bangladesh (বাংলাদেশ)";
   double _userLat = 23.8103;
   double _userLng = 90.4125;
+  int _districtOffsetMin = 0; // ± ৩০ মিনিট জেলা/উপজেলা সমন্বয়
 
   Map<String, int> _dailyHistory = {};
 
@@ -331,9 +395,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _fontScale = prefs.getDouble('fontScale') ?? 1.0;
       _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
 
-      _cityName = prefs.getString('cityName') ?? "Dhaka, Bangladesh";
+      _countryName = prefs.getString('countryName') ?? "Bangladesh (বাংলাদেশ)";
       _userLat = prefs.getDouble('userLat') ?? 23.8103;
       _userLng = prefs.getDouble('userLng') ?? 90.4125;
+      _districtOffsetMin = prefs.getInt('districtOffsetMin') ?? 0;
 
       _currentIndex = prefs.getInt('currentIndex') ?? 0;
       _currentCount = prefs.getInt('currentCount') ?? 0;
@@ -373,9 +438,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       await prefs.setDouble('fontScale', _fontScale);
       await prefs.setInt('hijriOffset', _hijriOffset);
 
-      await prefs.setString('cityName', _cityName);
+      await prefs.setString('countryName', _countryName);
       await prefs.setDouble('userLat', _userLat);
       await prefs.setDouble('userLng', _userLng);
+      await prefs.setInt('districtOffsetMin', _districtOffsetMin);
 
       await prefs.setInt('currentIndex', _currentIndex);
       await prefs.setInt('currentCount', _currentCount);
@@ -387,9 +453,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   Future<void> _syncWidget() async {
     try {
       final now = DateTime.now();
-      final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng);
+      final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
       final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
-      final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng);
+      final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
 
       final todayKey = _getTodayKey();
       final todayTotal = _dailyHistory[todayKey] ?? 0;
@@ -667,122 +733,104 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     );
   }
 
-  void _openLocationDialog(StateSetter setSettingsState) {
-    final latCtrl = TextEditingController(text: _userLat.toString());
-    final lngCtrl = TextEditingController(text: _userLng.toString());
-    String selectedCity = _cityName;
-
-    showDialog(
+  void _openCountrySearchDialog(StateSetter setSettingsState) {
+    String query = "";
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E2024),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          backgroundColor: const Color(0xFF222428),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Select Location (Offline)', style: TextStyle(color: Colors.white, fontSize: 18)),
-          content: SingleChildScrollView(
+        builder: (context, setModalState) {
+          final filteredCountries = SolarCalculator.worldCountries.where((c) {
+            return c.name.toLowerCase().contains(query.toLowerCase());
+          }).toList();
+
+          return SizedBox(
+            height: MediaQuery.of(context).size.height * 0.82,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Choose your city from list or enter coordinates manually for accurate prayer & Iftar times:',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1B1E),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white24),
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  child: DropdownButton<String>(
-                    value: SolarCalculator.globalCities.any((c) => c.name == selectedCity)
-                        ? selectedCity
-                        : "Custom (Manual Coordinates)",
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF222428),
-                    underline: const SizedBox(),
-                    items: SolarCalculator.globalCities.map((c) {
-                      return DropdownMenuItem<String>(
-                        value: c.name,
-                        child: Text(c.name, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                      );
-                    }).toList(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: TextField(
+                    autofocus: false,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Search country (যেমন: ভারত, Pakistan, Saudi)...',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF00B074)),
+                      filled: true,
+                      fillColor: const Color(0xFF26282D),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                     onChanged: (val) {
-                      if (val == null) return;
-                      setDlgState(() {
-                        selectedCity = val;
-                        final preset = SolarCalculator.globalCities.firstWhere((element) => element.name == val);
-                        if (preset.name != "Custom (Manual Coordinates)") {
-                          latCtrl.text = preset.lat.toString();
-                          lngCtrl.text = preset.lng.toString();
-                        }
+                      setModalState(() {
+                        query = val;
                       });
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text('Latitude (অক্ষাংশ):', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: latCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. 24.4672 (Madinah)',
-                    filled: true,
-                    fillColor: Color(0xFF1A1B1E),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text('Longitude (দ্রাঘিমাংশ):', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: lngCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    hintText: 'e.g. 39.6111 (Madinah)',
-                    filled: true,
-                    fillColor: Color(0xFF1A1B1E),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                const Divider(color: Colors.white12, height: 1),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filteredCountries.length,
+                    itemBuilder: (context, index) {
+                      final country = filteredCountries[index];
+                      final isSelected = country.name == _countryName;
+                      return ListTile(
+                        onTap: () {
+                          setState(() {
+                            _countryName = country.name;
+                            _userLat = country.lat;
+                            _userLng = country.lng;
+                            _districtOffsetMin = 0; // নতুন দেশ নির্বাচনে অফসেট রিসেট
+                          });
+                          setSettingsState(() {});
+                          _saveAllData();
+                          _syncWidget();
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Country selected: ${country.name}')),
+                          );
+                        },
+                        leading: Icon(
+                          Icons.public,
+                          color: isSelected ? const Color(0xFF00B074) : Colors.white38,
+                          size: 20,
+                        ),
+                        title: Text(
+                          country.name,
+                          style: TextStyle(
+                            color: isSelected ? const Color(0xFF00B074) : Colors.white,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle, color: Color(0xFF00B074), size: 20)
+                            : null,
+                      );
+                    },
                   ),
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
-              onPressed: () {
-                final double? parsedLat = double.tryParse(latCtrl.text.trim());
-                final double? parsedLng = double.tryParse(lngCtrl.text.trim());
-
-                if (parsedLat != null && parsedLng != null) {
-                  setState(() {
-                    _cityName = selectedCity;
-                    _userLat = parsedLat;
-                    _userLng = parsedLng;
-                  });
-                  setSettingsState(() {});
-                  _saveAllData();
-                  _syncWidget();
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Location updated: $_cityName')),
-                  );
-                }
-              },
-              child: const Text('Save Location', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1042,13 +1090,90 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    // ১. দেশ নির্বাচন
                     ListTile(
-                      leading: const Icon(Icons.location_on, color: Color(0xFF00B074)),
-                      title: const Text('Prayer & Iftar Location', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      subtitle: Text('$_cityName (${_userLat.toStringAsFixed(2)}, ${_userLng.toStringAsFixed(2)})',
-                          style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                      leading: const Icon(Icons.public, color: Color(0xFF00B074)),
+                      title: const Text('Country / Region (দেশ নির্বাচন)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      subtitle: Text(_countryName, style: const TextStyle(color: Colors.white60, fontSize: 13)),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
-                      onTap: () => _openLocationDialog(setSettingsState),
+                      onTap: () => _openCountrySearchDialog(setSettingsState),
+                    ),
+                    const Divider(color: Colors.white12),
+
+                    // ২. মুসলিম বাংলার আদলে জেলা/উপজেলা সময় কম-বেশি সমন্বয়
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'District / Local Time Offset (জেলা/উপজেলা সময় কম-বেশি)',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Adjust if your local district or mosque azan differs from the country capital:',
+                            style: TextStyle(color: Colors.white54, fontSize: 12),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF26282D),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle, color: Colors.white70, size: 28),
+                                  onPressed: () {
+                                    if (_districtOffsetMin > -30) {
+                                      setState(() => _districtOffsetMin--);
+                                      setSettingsState(() {});
+                                      _saveAllData();
+                                      _syncWidget();
+                                    }
+                                  },
+                                ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      _districtOffsetMin == 0
+                                          ? "Standard (0m)"
+                                          : (_districtOffsetMin > 0
+                                              ? "+$_districtOffsetMin Minutes"
+                                              : "$_districtOffsetMin Minutes"),
+                                      style: TextStyle(
+                                        color: _districtOffsetMin == 0 ? Colors.white : const Color(0xFF00B074),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Text(
+                                      _districtOffsetMin == 0
+                                          ? "Capital standard time"
+                                          : (_districtOffsetMin > 0 ? "Added to local time" : "Subtracted from local time"),
+                                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add_circle, color: Color(0xFF00B074), size: 28),
+                                  onPressed: () {
+                                    if (_districtOffsetMin < 30) {
+                                      setState(() => _districtOffsetMin++);
+                                      setSettingsState(() {});
+                                      _saveAllData();
+                                      _syncWidget();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const Divider(color: Colors.white12),
 
@@ -1097,7 +1222,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     const Divider(color: Colors.white12),
 
                     ListTile(
-                      title: const Text('Hijri Date Adjustment', style: TextStyle(color: Colors.white)),
+                      title: const Text('Hijri Date Adjustment (চাঁদ সমন্বয়)', style: TextStyle(color: Colors.white)),
                       subtitle: Text('Moon Sighting Offset: ${_hijriOffset >= 0 ? "+$_hijriOffset" : "$_hijriOffset"} Days',
                           style: const TextStyle(color: Colors.white60, fontSize: 12)),
                     ),
@@ -1234,7 +1359,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
               ),
               const Divider(color: Colors.white12, height: 24),
-              const Text('Developer: AHM', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+              const Text('Developer: AHM[span_0](start_span)[span_0](end_span)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
               const SizedBox(height: 12),
               InkWell(
                 onTap: () async {
@@ -1280,9 +1405,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng);
+    final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
     final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
-    final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng);
+    final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
 
     final currentDhikr = _dhikrList.isNotEmpty
         ? _dhikrList[_currentIndex]
