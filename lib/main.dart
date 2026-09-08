@@ -573,7 +573,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
       await HomeWidget.updateWidget(
         name: 'TasbihWidgetProvider',
-        androidName: 'es.antonborri.home_widget.TasbihWidgetProvider',
+        androidName: 'com.ahm.tasbih.TasbihWidgetProvider',
       );
     } catch (_) {}
   }
