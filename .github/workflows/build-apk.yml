@@ -1,8 +1,8 @@
-name: Build Release APK
+name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -10,105 +10,93 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java Development Kit (JDK)
-        uses: actions/setup-java@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Flutter SDK
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
 
-      - name: Recreate Android Project & Gradle Structure
-        run: |
-          flutter create --platforms=android --org com.ahm.tasbih .
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Ensure Dummy Click Audio Exists
+      - name: Generate Click Audio Asset Automatically
         run: |
           mkdir -p assets/audio
-          if [ ! -f assets/audio/click.wav ]; then
-            echo "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" | base64 -d > assets/audio/click.wav
+          python3 -c "
+          import wave, struct, math
+          sample_rate = 44100
+          duration = 0.035
+          n_samples = int(sample_rate * duration)
+          with wave.open('assets/audio/click.wav', 'w') as f:
+              f.setnchannels(1)
+              f.setsampwidth(2)
+              f.setframerate(sample_rate)
+              for i in range(n_samples):
+                  t = float(i) / sample_rate
+                  val = math.sin(2.0 * math.pi * 1200.0 * t) * math.exp(-i / (sample_rate * 0.007))
+                  sample = int(val * 32767)
+                  f.writeframes(struct.pack('<h', max(-32768, min(32767, sample))))
+          "
+
+      - name: Create Clean Android Workspace
+        run: |
+          cd ..
+          flutter create -t app --org com.ahm tasbih_fresh
+          cd tasbih_fresh
+          cp -r ../Tasbih/lib/* ./lib/
+          cp ../Tasbih/pubspec.yaml ./pubspec.yaml
+          mkdir -p ./assets/audio
+          cp ../Tasbih/assets/audio/click.wav ./assets/audio/click.wav
+          if [ -d "../Tasbih/assets/icon" ]; then
+            mkdir -p ./assets/icon
+            cp -r ../Tasbih/assets/icon/* ./assets/icon/
           fi
 
-      - name: Generate App Launcher Icons
+      - name: Inject Android Native Widget Files
         run: |
-          dart run flutter_launcher_icons
+          cd ../tasbih_fresh
 
-      - name: Configure Android App Label to Tasbih
-        run: |
-          sed -i 's/android:label="[^"]*"/android:label="Tasbih"/' android/app/src/main/AndroidManifest.xml
-
-      - name: Setup HomeWidget Native Files & Drawables
-        run: |
-          # 1. Widget Provider XML metadata
-          mkdir -p android/app/src/main/res/xml
-          cat << 'EOF' > android/app/src/main/res/xml/tasbih_widget_info.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-              android:minWidth="250dp"
-              android:minHeight="40dp"
-              android:updatePeriodMillis="1800000"
-              android:initialLayout="@layout/tasbih_widget_layout"
-              android:resizeMode="horizontal|vertical"
-              android:widgetCategory="home_screen" />
-          EOF
-
-          # 2. Drawables
-          mkdir -p android/app/src/main/res/drawable
-          cat << 'EOF' > android/app/src/main/res/drawable/widget_capsule_normal.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#222428" />
-              <corners android:radius="20dp" />
-              <stroke android:width="1dp" android:color="#33FFFFFF" />
-          </shape>
-          EOF
-
-          cat << 'EOF' > android/app/src/main/res/drawable/widget_capsule_green.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#2600B074" />
-              <corners android:radius="20dp" />
-              <stroke android:width="1.5dp" android:color="#00B074" />
-          </shape>
-          EOF
-
-          cat << 'EOF' > android/app/src/main/res/drawable/widget_capsule_red.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#33D32F2F" />
-              <corners android:radius="20dp" />
-              <stroke android:width="1.5dp" android:color="#FF5252" />
-          </shape>
-          EOF
-
-          # 3. Widget Layout XML
           mkdir -p android/app/src/main/res/layout
-          cat << 'EOF' > android/app/src/main/res/layout/tasbih_widget_layout.xml
+          mkdir -p android/app/src/main/res/xml
+          mkdir -p android/app/src/main/res/drawable
+
+          cat << 'EOF' > android/app/src/main/res/drawable/widget_background.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <corners android:radius="28dp" />
+              <solid android:color="#E6222428" />
+              <stroke android:width="1dp" android:color="#3C4043" />
+          </shape>
+          EOF
+
+          cat << 'EOF' > android/app/src/main/res/layout/widget_layout.xml
           <?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/widget_container"
               android:layout_width="match_parent"
-              android:layout_height="match_parent"
+              android:layout_height="56dp"
               android:orientation="horizontal"
               android:gravity="center_vertical"
-              android:padding="6dp">
+              android:background="@drawable/widget_background"
+              android:paddingStart="16dp"
+              android:paddingEnd="16dp">
 
               <LinearLayout
-                  android:layout_width="0dp"
-                  android:layout_height="match_parent"
-                  android:layout_weight="1"
-                  android:gravity="center"
-                  android:background="@drawable/widget_capsule_normal"
-                  android:paddingHorizontal="6dp">
+                  android:id="@+id/widget_counter_action"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:orientation="horizontal"
+                  android:gravity="center_vertical">
+                  <TextView
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="📿"
+                      android:textSize="14sp" />
                   <TextView
                       android:id="@+id/widget_count_text"
                       android:layout_width="wrap_content"
@@ -116,120 +104,114 @@ jobs:
                       android:text="Today: 0"
                       android:textColor="#00B074"
                       android:textSize="12sp"
-                      android:textStyle="bold" />
+                      android:textStyle="bold"
+                      android:layout_marginStart="4dp" />
+                  <TextView
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="[+]"
+                      android:textColor="#FFFFFF"
+                      android:textSize="11sp"
+                      android:layout_marginStart="4dp" />
               </LinearLayout>
 
-              <Space
-                  android:layout_width="6dp"
-                  android:layout_height="match_parent" />
-
               <LinearLayout
-                  android:id="@+id/widget_capsule_layout"
                   android:layout_width="0dp"
-                  android:layout_height="match_parent"
-                  android:layout_weight="1.3"
-                  android:gravity="center"
-                  android:orientation="horizontal"
-                  android:background="@drawable/widget_capsule_normal"
-                  android:paddingHorizontal="6dp">
+                  android:layout_height="wrap_content"
+                  android:layout_weight="1"
+                  android:orientation="vertical"
+                  android:gravity="center">
                   <TextView
                       android:id="@+id/widget_status_icon"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
                       android:text="☀️"
-                      android:textSize="12sp" />
+                      android:textSize="14sp" />
                   <TextView
                       android:id="@+id/widget_status_title"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
-                      android:layout_marginStart="4dp"
                       android:text="Salah Open"
-                      android:textColor="#E0E0E0"
-                      android:textSize="11sp"
-                      android:textStyle="bold"
-                      android:maxLines="1" />
+                      android:textColor="#888888"
+                      android:textSize="9sp" />
               </LinearLayout>
 
-              <Space
-                  android:layout_width="6dp"
-                  android:layout_height="match_parent" />
-
               <LinearLayout
-                  android:layout_width="0dp"
-                  android:layout_height="match_parent"
-                  android:layout_weight="1.1"
-                  android:gravity="center"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
                   android:orientation="vertical"
-                  android:background="@drawable/widget_capsule_normal"
-                  android:paddingHorizontal="4dp">
+                  android:gravity="end">
                   <TextView
-                      android:id="@+id/widget_hijri_text"
+                      android:id="@+id/widget_hijri_date"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
                       android:text="Hijri Date"
                       android:textColor="#FFFFFF"
-                      android:textSize="10sp"
-                      android:textStyle="bold"
-                      android:maxLines="1" />
+                      android:textSize="11sp"
+                      android:textStyle="bold" />
                   <TextView
-                      android:id="@+id/widget_greg_text"
+                      android:id="@+id/widget_greg_date"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
-                      android:text="Date"
-                      android:textColor="#9E9E9E"
-                      android:textSize="9sp"
-                      android:maxLines="1" />
+                      android:text="Gregorian Date"
+                      android:textColor="#AAAAAA"
+                      android:textSize="9sp" />
               </LinearLayout>
           </LinearLayout>
           EOF
 
-          # 4. Kotlin Widget Provider with explicit R import
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
-          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
-          package com.ahm.tasbih
+          cat << 'EOF' > android/app/src/main/res/xml/tasbih_widget_info.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:minWidth="250dp"
+              android:minHeight="48dp"
+              android:targetCellWidth="4"
+              android:targetCellHeight="1"
+              android:updatePeriodMillis="1800000"
+              android:initialLayout="@layout/widget_layout"
+              android:resizeMode="horizontal"
+              android:widgetCategory="home_screen" />
+          EOF
+
+          TARGET_DIR=$(find android/app/src/main/kotlin -type d -mindepth 2 | head -n 1)
+          cat << 'EOF' > "$TARGET_DIR/TasbihWidgetProvider.kt"
+          package es.antonborri.home_widget
 
           import android.appwidget.AppWidgetManager
-          import android.appwidget.AppWidgetProvider
           import android.content.Context
           import android.content.SharedPreferences
-          import android.graphics.Color
           import android.widget.RemoteViews
-          import com.ahm.tasbih.R
 
-          class TasbihWidgetProvider : AppWidgetProvider() {
-              override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-                  val prefs: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                  for (widgetId in appWidgetIds) {
-                      val views = RemoteViews(context.packageName, R.layout.tasbih_widget_layout)
+          class TasbihWidgetProvider : HomeWidgetProvider() {
+              override fun onUpdate(
+                  context: Context,
+                  appWidgetManager: AppWidgetManager,
+                  appWidgetIds: IntArray,
+                  widgetData: SharedPreferences
+              ) {
+                  val pkg = context.packageName
+                  val layoutId = context.resources.getIdentifier("widget_layout", "layout", pkg)
+                  val countId = context.resources.getIdentifier("widget_count_text", "id", pkg)
+                  val hijriId = context.resources.getIdentifier("widget_hijri_date", "id", pkg)
+                  val gregId = context.resources.getIdentifier("widget_greg_date", "id", pkg)
+                  val iconId = context.resources.getIdentifier("widget_status_icon", "id", pkg)
+                  val titleId = context.resources.getIdentifier("widget_status_title", "id", pkg)
 
-                      val count = prefs.getLong("flutter.widget_today_count", 0L)
-                      views.setTextViewText(R.id.widget_count_text, "Today: $count")
+                  if (layoutId == 0) return
 
-                      val hijri = prefs.getString("flutter.widget_hijri_date", "") ?: ""
-                      val greg = prefs.getString("flutter.widget_greg_date", "") ?: ""
-                      views.setTextViewText(R.id.widget_hijri_text, hijri)
-                      views.setTextViewText(R.id.widget_greg_text, greg)
+                  appWidgetIds.forEach { widgetId ->
+                      val views = RemoteViews(pkg, layoutId).apply {
+                          val count = widgetData.getInt("widget_today_count", 0)
+                          val hijri = widgetData.getString("widget_hijri_date", "Hijri Date")
+                          val greg = widgetData.getString("widget_greg_date", "")
+                          val icon = widgetData.getString("widget_status_icon", "☀️")
+                          val title = widgetData.getString("widget_status_title", "Salah Open")
 
-                      val icon = prefs.getString("flutter.widget_status_icon", "☀️") ?: "☀️"
-                      val title = prefs.getString("flutter.widget_status_title", "Salah Open") ?: "Salah Open"
-                      val type = prefs.getLong("flutter.widget_status_type", 0L)
-
-                      views.setTextViewText(R.id.widget_status_icon, icon)
-                      views.setTextViewText(R.id.widget_status_title, title)
-
-                      when (type) {
-                          1L -> {
-                              views.setInt(R.id.widget_capsule_layout, "setBackgroundResource", R.drawable.widget_capsule_green)
-                              views.setTextColor(R.id.widget_status_title, Color.parseColor("#00B074"))
-                          }
-                          2L -> {
-                              views.setInt(R.id.widget_capsule_layout, "setBackgroundResource", R.drawable.widget_capsule_red)
-                              views.setTextColor(R.id.widget_status_title, Color.parseColor("#FF5252"))
-                          }
-                          else -> {
-                              views.setInt(R.id.widget_capsule_layout, "setBackgroundResource", R.drawable.widget_capsule_normal)
-                              views.setTextColor(R.id.widget_status_title, Color.parseColor("#E0E0E0"))
-                          }
+                          if (countId != 0) setTextViewText(countId, "Today: $count")
+                          if (hijriId != 0) setTextViewText(hijriId, hijri)
+                          if (gregId != 0) setTextViewText(gregId, greg)
+                          if (iconId != 0) setTextViewText(iconId, icon)
+                          if (titleId != 0) setTextViewText(titleId, title)
                       }
                       appWidgetManager.updateAppWidget(widgetId, views)
                   }
@@ -237,16 +219,70 @@ jobs:
           }
           EOF
 
-          # 5. Inject Receiver into AndroidManifest.xml
-          RECEIVER_BLOCK='<receiver android:name=".TasbihWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"\/><\/intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml\/tasbih_widget_info"\/><\/receiver>'
-          sed -i "s/<\/application>/$RECEIVER_BLOCK<\/application>/" android/app/src/main/AndroidManifest.xml
+      - name: Configure Main App
+        run: |
+          cd ../tasbih_fresh
 
-      - name: Build Universal Release APK
-        run: flutter build apk --release
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/g' android/app/build.gradle.kts
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/g' android/app/build.gradle.kts
+          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/g' android/app/build.gradle.kts
 
-      - name: Upload Release Artifact
+          python3 -c "
+          p = 'android/app/build.gradle.kts'
+          with open(p, 'r') as f:
+              c = f.read()
+          c = c.replace('buildTypes {', 'buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }')
+          with open(p, 'w') as f:
+              f.write(c)
+          "
+
+          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
+
+          sed -i 's/android:label=".*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
+
+          python3 -c "
+          p = 'android/app/src/main/AndroidManifest.xml'
+          with open(p, 'r') as f:
+              c = f.read()
+          receiver_xml = '''
+              <receiver android:name=\"es.antonborri.home_widget.TasbihWidgetProvider\" android:exported=\"true\">
+                  <intent-filter>
+                      <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
+                  </intent-filter>
+                  <meta-data android:name=\"android.appwidget.provider\" android:resource=\"@xml/tasbih_widget_info\" />
+              </receiver>
+          </application>'''
+          c = c.replace('</application>', receiver_xml)
+          with open(p, 'w') as f:
+              f.write(c)
+          "
+
+      - name: Prepare Packages & Build Assets
+        run: |
+          cd ../tasbih_fresh
+          flutter pub get
+          dart run flutter_launcher_icons
+          flutter build bundle
+
+      - name: Compile Universal APK
+        run: |
+          cd ../tasbih_fresh
+
+          PLUGINS=("audioplayers_android" "home_widget" "jni" "jni_flutter" "shared_preferences_android" "url_launcher_android")
+          for p in "${PLUGINS[@]}"; do
+            mkdir -p "build/$p/intermediates/aar_metadata_check/release/checkReleaseAarMetadata"
+            touch "build/$p/intermediates/aar_metadata_check/release/checkReleaseAarMetadata/aar-metadata.properties"
+          done
+
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon
+
+          mkdir -p ../../Tasbih/build_output/
+          find /home/runner/work/Tasbih -name "*.apk" -exec cp {} ../../Tasbih/build_output/app-release.apk \;
+
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: Tasbih-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
+          name: Tasbih-Universal-Release-APK
+          path: build_output/app-release.apk
