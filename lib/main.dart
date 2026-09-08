@@ -45,6 +45,148 @@ class DhikrItem {
   );
 }
 
+class SolarCalculator {
+  // গাণিতিক সৌর অ্যালগরিদম (বিশ্বের যে কোনো স্থানের জন্য প্রযোজ্য)
+  static Map<String, int> getTimes(DateTime date, {double lat = 23.8103, double lng = 90.4125}) {
+    int dayOfYear = int.parse("${date.difference(DateTime(date.year, 1, 1)).inDays + 1}");
+    double b = 2 * pi * (dayOfYear - 81) / 365.0;
+    
+    // সময়ের সমীকরণ (মিনিট)
+    double eot = 9.87 * sin(2 * b) - 7.53 * cos(b) - 1.5 * sin(b);
+    // সৌর বিষুব (ডিগ্রি)
+    double declination = 23.45 * sin(2 * pi * (284 + dayOfYear) / 365.0);
+    double declRad = declination * pi / 180.0;
+    double latRad = lat * pi / 180.0;
+
+    double tzOffsetHours = date.timeZoneOffset.inMinutes / 60.0;
+    // স্থানীয় সৌর মধ্যাহ্ন (মিনিট)
+    double solarNoonMin = 720.0 - (lng * 4.0) - eot + (tzOffsetHours * 60.0);
+
+    // সূর্যোদয় ও সূর্যাস্তের কোণ হিসাব (-0.833 ডিগ্রি)
+    double cosHa = (sin(-0.833 * pi / 180.0) - sin(latRad) * sin(declRad)) / (cos(latRad) * cos(declRad));
+    cosHa = cosHa.clamp(-1.0, 1.0);
+    double haDeg = acos(cosHa) * 180.0 / pi;
+    double haMin = haDeg * 4.0;
+
+    // ফজরের কোণ হিসাব (-18 ডিগ্রি)
+    double cosFajr = (sin(-18.0 * pi / 180.0) - sin(latRad) * sin(declRad)) / (cos(latRad) * cos(declRad));
+    cosFajr = cosFajr.clamp(-1.0, 1.0);
+    double fajrMin = acos(cosFajr) * 180.0 / pi * 4.0;
+
+    int sunrise = (solarNoonMin - haMin).round();
+    int sunset = (solarNoonMin + haMin).round();
+    int noon = solarNoonMin.round();
+    int fajr = (solarNoonMin - fajrMin).round();
+    int sehriEnd = fajr - 3; // সতর্কতামূলক ৩ মিনিট পূর্বে সমাপ্তি
+    int iftar = sunset + 1;  // ১ মিনিট সতর্কতামূলক সেফটি মার্জিন
+
+    return {
+      'sehriEnd': sehriEnd,
+      'sunrise': sunrise,
+      'noon': noon,
+      'sunset': sunset,
+      'iftar': iftar,
+    };
+  }
+
+  static String formatMin(int totalMinutes) {
+    int m = (totalMinutes % 1440 + 1440) % 1440;
+    int h = m ~/ 60;
+    int min = m % 60;
+    String period = h >= 12 ? 'PM' : 'AM';
+    int displayH = h % 12 == 0 ? 12 : h % 12;
+    return "$displayH:${min.toString().padLeft(2, '0')} $period";
+  }
+
+  static Map<String, dynamic> evaluateStatus(DateTime now, {double lat = 23.8103, double lng = 90.4125}) {
+    final times = getTimes(now, lat: lat, lng: lng);
+    int cur = now.hour * 60 + now.minute;
+
+    int sehriEnd = times['sehriEnd']!;
+    int sunrise = times['sunrise']!;
+    int noon = times['noon']!;
+    int sunset = times['sunset']!;
+    int iftar = times['iftar']!;
+
+    // ১. হারাম সময় (লাল সংকেত - কোড: 2)
+    // সূর্যোদয়: শুরু থেকে পরবর্তী ১৮ মিনিট
+    if (cur >= sunrise && cur < sunrise + 18) {
+      return {
+        'statusType': 2,
+        'icon': '⛔',
+        'title': 'Sunrise (No Salah)',
+        'badgeColor': 'red',
+        'isForbidden': true,
+      };
+    }
+    // যাওয়াল: দ্বিপ্রহরের পূর্বের ১২ মিনিট
+    if (cur >= noon - 12 && cur < noon) {
+      return {
+        'statusType': 2,
+        'icon': '⛔',
+        'title': 'Zawwal (No Salah)',
+        'badgeColor': 'red',
+        'isForbidden': true,
+      };
+    }
+    // সূর্যাস্ত: অস্ত যাওয়ার পূর্বের ১৫ মিনিট
+    if (cur >= sunset - 15 && cur < sunset) {
+      return {
+        'statusType': 2,
+        'icon': '⛔',
+        'title': 'Sunset (No Salah)',
+        'badgeColor': 'red',
+        'isForbidden': true,
+      };
+    }
+
+    // ২. ইফতারের সময় (সবুজ সংকেত - কোড: 1)
+    // সূর্যাস্তের পর থেকে মাগরিবের প্রথম ৩০ মিনিট
+    if (cur >= iftar && cur < iftar + 35) {
+      return {
+        'statusType': 1,
+        'icon': '🍽️',
+        'title': 'Iftar Now (${formatMin(iftar)})',
+        'badgeColor': 'green',
+        'isForbidden': false,
+      };
+    }
+
+    // ৩. সেহরি সমাপ্তির ১ ঘণ্টা পূর্বের কাউন্টডাউন (সবুজ সংকেত - কোড: 1)
+    if (cur >= sehriEnd - 60 && cur <= sehriEnd) {
+      int left = sehriEnd - cur;
+      return {
+        'statusType': 1,
+        'icon': '🥣',
+        'title': left <= 20 ? 'Sehri: ${left}m left' : 'Sehri Ends ${formatMin(sehriEnd)}',
+        'badgeColor': 'green',
+        'isForbidden': false,
+      };
+    }
+
+    // ৪. সাধারণ সময় (স্বাভাবিক সংকেত - কোড: 0)
+    // আসরের পর থেকে ইফতারের আগ পর্যন্ত সময় দেখানো
+    if (cur >= noon + 240 && cur < sunset - 15) {
+      return {
+        'statusType': 0,
+        'icon': '🌇',
+        'title': 'Iftar: ${formatMin(iftar)}',
+        'badgeColor': 'dark',
+        'isForbidden': false,
+      };
+    }
+
+    bool isNight = cur < sunrise || cur >= sunset;
+    return {
+      'statusType': 0,
+      'icon': isNight ? '🌙' : '☀️',
+      'title': 'Salah Open',
+      'badgeColor': 'dark',
+      'isForbidden': false,
+    };
+  }
+}
+
 class HijriCalculator {
   static const List<String> hijriMonths = [
     "Muharram", "Safar", "Rabi' al-Awwal", "Rabi' al-Thani",
@@ -52,11 +194,9 @@ class HijriCalculator {
     "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
   ];
 
-  static Map<String, dynamic> calculate(DateTime date, int offsetDays) {
-    int maghribHour = 18;
-    int maghribMinute = 15;
-    bool isAfterMaghrib = (date.hour > maghribHour) ||
-        (date.hour == maghribHour && date.minute >= maghribMinute);
+  static Map<String, dynamic> calculate(DateTime date, int offsetDays, {int sunsetMin = 1095}) {
+    int curMin = date.hour * 60 + date.minute;
+    bool isAfterMaghrib = curMin >= sunsetMin;
 
     DateTime adjusted = date.add(Duration(days: offsetDays + (isAfterMaghrib ? 1 : 0)));
 
@@ -92,34 +232,8 @@ class HijriCalculator {
       'day': hDay,
       'month': monthName,
       'year': hYear,
-      'isNight': isAfterMaghrib || date.hour < 5,
       'formatted': "$hDay $monthName $hYear AH"
     };
-  }
-}
-
-class SalahForbiddenTime {
-  static Map<String, dynamic> checkStatus(DateTime now) {
-    int curMin = now.hour * 60 + now.minute;
-
-    int sunriseStart = 5 * 60 + 40;
-    int sunriseEnd = 6 * 60 + 0;
-
-    int zawwalStart = 11 * 60 + 45;
-    int zawwalEnd = 12 * 60 + 0;
-
-    int sunsetStart = 17 * 60 + 55;
-    int sunsetEnd = 18 * 60 + 15;
-
-    if (curMin >= sunriseStart && curMin <= sunriseEnd) {
-      return {'isForbidden': true, 'title': 'Sunrise (No Salah)', 'reason': 'Forbidden prayer time'};
-    } else if (curMin >= zawwalStart && curMin <= zawwalEnd) {
-      return {'isForbidden': true, 'title': 'Zawwal (No Salah)', 'reason': 'Forbidden prayer time'};
-    } else if (curMin >= sunsetStart && curMin <= sunsetEnd) {
-      return {'isForbidden': true, 'title': 'Sunset (No Salah)', 'reason': 'Forbidden prayer time'};
-    }
-
-    return {'isForbidden': false, 'title': 'Salah Open', 'reason': 'Normal time'};
   }
 }
 
@@ -162,6 +276,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   bool _isVibrateOn = true;
   double _fontScale = 1.0;
   int _hijriOffset = 0;
+  double _userLat = 23.8103;
+  double _userLng = 90.4125;
 
   Map<String, int> _dailyHistory = {};
 
@@ -209,6 +325,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
       _fontScale = prefs.getDouble('fontScale') ?? 1.0;
       _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
+      _userLat = prefs.getDouble('userLat') ?? 23.8103;
+      _userLng = prefs.getDouble('userLng') ?? 90.4125;
       _currentIndex = prefs.getInt('currentIndex') ?? 0;
       _currentCount = prefs.getInt('currentCount') ?? 0;
 
@@ -218,36 +336,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
         _dhikrList = decoded.map((e) => DhikrItem.fromJson(e)).toList();
       } else {
         _dhikrList = [
-          DhikrItem(
-            title: "Subhanallah",
-            arabic: "سُبْحَانَ ٱللَّٰهِ",
-            meaning: "Glory be to Allah",
-            target: 33,
-          ),
-          DhikrItem(
-            title: "Alhamdulillah",
-            arabic: "ٱلْحَمْدُ لِلَّٰهِ",
-            meaning: "Praise be to Allah",
-            target: 33,
-          ),
-          DhikrItem(
-            title: "Allahu Akbar",
-            arabic: "ٱللَّٰهُ أَكْبَرُ",
-            meaning: "Allah is the Greatest",
-            target: 34,
-          ),
-          DhikrItem(
-            title: "Kalima Tayyibah",
-            arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ",
-            meaning: "There is no god but Allah, Muhammad is the Messenger of Allah",
-            target: 100,
-          ),
-          DhikrItem(
-            title: "Astaghfirullah",
-            arabic: "أَسْتَغْفِرُ ٱللَّٰهَ",
-            meaning: "I seek forgiveness from Allah",
-            target: 100,
-          ),
+          DhikrItem(title: "Subhanallah", arabic: "سُبْحَانَ ٱللَّٰهِ", meaning: "Glory be to Allah", target: 33),
+          DhikrItem(title: "Alhamdulillah", arabic: "ٱلْحَمْدُ لِلَّٰهِ", meaning: "Praise be to Allah", target: 33),
+          DhikrItem(title: "Allahu Akbar", arabic: "ٱللَّٰهُ أَكْبَرُ", meaning: "Allah is the Greatest", target: 34),
+          DhikrItem(title: "Kalima Tayyibah", arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ", meaning: "There is no god but Allah, Muhammad is the Messenger of Allah", target: 100),
+          DhikrItem(title: "Astaghfirullah", arabic: "أَسْتَغْفِرُ ٱللَّٰهَ", meaning: "I seek forgiveness from Allah", target: 100),
         ];
       }
 
@@ -271,6 +364,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       await prefs.setBool('isVibrateOn', _isVibrateOn);
       await prefs.setDouble('fontScale', _fontScale);
       await prefs.setInt('hijriOffset', _hijriOffset);
+      await prefs.setDouble('userLat', _userLat);
+      await prefs.setDouble('userLng', _userLng);
       await prefs.setInt('currentIndex', _currentIndex);
       await prefs.setInt('currentCount', _currentCount);
       await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
@@ -281,8 +376,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   Future<void> _syncWidget() async {
     try {
       final now = DateTime.now();
-      final hijri = HijriCalculator.calculate(now, _hijriOffset);
-      final salah = SalahForbiddenTime.checkStatus(now);
+      final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng);
+      final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
+      final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng);
 
       final todayKey = _getTodayKey();
       final todayTotal = _dailyHistory[todayKey] ?? 0;
@@ -291,11 +387,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       await HomeWidget.saveWidgetData<String>('widget_hijri_date', hijri['formatted']);
       await HomeWidget.saveWidgetData<String>('widget_greg_date', "${_getDayName(now.weekday)}, ${now.day} ${_getMonthName(now.month)}");
 
-      String celestialIcon = hijri['isNight'] ? "🌙✨" : "☀️";
-      if (salah['isForbidden']) celestialIcon = "⛔";
-
-      await HomeWidget.saveWidgetData<String>('widget_celestial_icon', celestialIcon);
-      await HomeWidget.saveWidgetData<String>('widget_prayer_status', salah['title']);
+      await HomeWidget.saveWidgetData<String>('widget_status_icon', status['icon']);
+      await HomeWidget.saveWidgetData<String>('widget_status_title', status['title']);
+      await HomeWidget.saveWidgetData<int>('widget_status_type', status['statusType']); // 0=dark, 1=green, 2=red
 
       await HomeWidget.updateWidget(
         name: 'TasbihWidgetProvider',
@@ -790,7 +884,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSettingsState) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.85,
+          height: MediaQuery.of(context).size.height * 0.88,
           child: Column(
             children: [
               Container(
@@ -808,7 +902,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                   children: [
                     Icon(Icons.settings, color: Color(0xFF00B074)),
                     SizedBox(width: 10),
-                    Text('Settings & Analytics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text('Settings & Calculations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ],
                 ),
               ),
@@ -903,6 +997,17 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                       title: const Text('Restore Protected Backup', style: TextStyle(color: Colors.white)),
                       subtitle: const Text('Paste encrypted data using PIN', style: TextStyle(color: Colors.white60, fontSize: 12)),
                       onTap: () => _showEncryptedRestoreDialog(),
+                    ),
+                    const Divider(color: Colors.white12),
+
+                    ListTile(
+                      leading: const Icon(Icons.info_outline, color: Color(0xFF00B074)),
+                      title: const Text('About Tasbih', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('App dedication & developer credits', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showAboutDialog();
+                      },
                     ),
                   ],
                 ),
@@ -1034,8 +1139,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final hijri = HijriCalculator.calculate(now, _hijriOffset);
-    final salah = SalahForbiddenTime.checkStatus(now);
+    final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng);
+    final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
+    final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng);
 
     final currentDhikr = _dhikrList.isNotEmpty
         ? _dhikrList[_currentIndex]
@@ -1043,6 +1149,22 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
     final target = currentDhikr.target;
     final double progress = target > 0 ? (_currentCount / target).clamp(0.0, 1.0) : 0.0;
+
+    Color badgeBg = const Color(0xFF222428);
+    Color badgeBorder = Colors.white12;
+    Color badgeText = Colors.white70;
+
+    if (status['statusType'] == 1) {
+      // সবুজ সংকেত (সেহরি বা ইফতার)
+      badgeBg = const Color(0xFF00B074).withOpacity(0.2);
+      badgeBorder = const Color(0xFF00B074).withOpacity(0.5);
+      badgeText = const Color(0xFF00B074);
+    } else if (status['statusType'] == 2) {
+      // লাল সংকেত (হারাম সময়)
+      badgeBg = const Color(0xFFD32F2F).withOpacity(0.2);
+      badgeBorder = const Color(0xFFD32F2F).withOpacity(0.5);
+      badgeText = Colors.redAccent;
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -1052,74 +1174,63 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.help_outline, color: Colors.white70),
-                      onPressed: _showAboutDialog,
-                    ),
                     const Text(
                       'Tasbih',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.format_list_bulleted, color: Color(0xFF00B074)),
-                          onPressed: _openDhikrListModal,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: badgeBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: badgeBorder),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(status['icon'], style: const TextStyle(fontSize: 12)),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  status['statusType'] != 0
+                                      ? "${hijri['day']} ${hijri['month']} • ${status['title']}"
+                                      : "${hijri['day']} ${hijri['month']} ${hijri['year']}",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: badgeText,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.settings, color: Colors.white70),
-                          onPressed: _openSettingsModal,
-                        ),
-                      ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.format_list_bulleted, color: Color(0xFF00B074)),
+                      onPressed: _openDhikrListModal,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.settings, color: Colors.white70),
+                      onPressed: _openSettingsModal,
+                      visualDensity: VisualDensity.compact,
                     ),
                   ],
                 ),
               ),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: salah['isForbidden']
-                        ? const Color(0xFFD32F2F).withOpacity(0.18)
-                        : const Color(0xFF222428),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: salah['isForbidden']
-                          ? const Color(0xFFD32F2F).withOpacity(0.4)
-                          : Colors.white12,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        salah['isForbidden'] ? "⛔" : (hijri['isNight'] ? "🌙✨" : "☀️"),
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        hijri['formatted'],
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      if (salah['isForbidden']) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          "• ${salah['title']}",
-                          style: const TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
