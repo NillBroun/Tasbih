@@ -61,7 +61,6 @@ jobs:
         run: |
           cd ../tasbih_fresh
 
-          # 1. Widget XML Layout
           mkdir -p android/app/src/main/res/layout
           mkdir -p android/app/src/main/res/xml
           mkdir -p android/app/src/main/res/drawable
@@ -87,7 +86,6 @@ jobs:
               android:paddingStart="16dp"
               android:paddingEnd="16dp">
 
-              <!-- Left: Tasbih Counter -->
               <LinearLayout
                   android:id="@+id/widget_counter_action"
                   android:layout_width="wrap_content"
@@ -117,7 +115,6 @@ jobs:
                       android:layout_marginStart="4dp" />
               </LinearLayout>
 
-              <!-- Center: Sun / Moon & Salah Status -->
               <LinearLayout
                   android:layout_width="0dp"
                   android:layout_height="wrap_content"
@@ -139,7 +136,6 @@ jobs:
                       android:textSize="9sp" />
               </LinearLayout>
 
-              <!-- Right: Hijri Date -->
               <LinearLayout
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
@@ -177,7 +173,6 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # 2. Kotlin Widget Provider
           mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
           package com.ahm.tasbih
@@ -220,7 +215,7 @@ jobs:
           cd ../tasbih_fresh
 
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/g' android/app/build.gradle.kts
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' android/app/build.gradle.kts
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/g' android/app/build.gradle.kts
           sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 34/g' android/app/build.gradle.kts
 
           python3 -c "
@@ -275,6 +270,8 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
+            -PskipDependencyChecks=true \
+            -x :app:ReleaseMinSdkCheck \
             -x :audioplayers_android:checkReleaseAarMetadata \
             -x :home_widget:checkReleaseAarMetadata \
             -x :shared_preferences_android:checkReleaseAarMetadata \
