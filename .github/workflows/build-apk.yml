@@ -173,16 +173,15 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
-          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
-          package com.ahm.tasbih
+          # Dynamic Kotlin provider without any package R import dependency
+          TARGET_DIR=$(find android/app/src/main/kotlin -type d -mindepth 2 | head -n 1)
+          cat << 'EOF' > "$TARGET_DIR/TasbihWidgetProvider.kt"
+          package es.antonborri.home_widget
 
           import android.appwidget.AppWidgetManager
           import android.content.Context
           import android.content.SharedPreferences
           import android.widget.RemoteViews
-          import es.antonborri.home_widget.HomeWidgetProvider
-          import com.ahm.tasbih.R
 
           class TasbihWidgetProvider : HomeWidgetProvider() {
               override fun onUpdate(
@@ -191,19 +190,29 @@ jobs:
                   appWidgetIds: IntArray,
                   widgetData: SharedPreferences
               ) {
+                  val pkg = context.packageName
+                  val layoutId = context.resources.getIdentifier("widget_layout", "layout", pkg)
+                  val countId = context.resources.getIdentifier("widget_count_text", "id", pkg)
+                  val hijriId = context.resources.getIdentifier("widget_hijri_date", "id", pkg)
+                  val gregId = context.resources.getIdentifier("widget_greg_date", "id", pkg)
+                  val iconId = context.resources.getIdentifier("widget_celestial_icon", "id", pkg)
+                  val prayerId = context.resources.getIdentifier("widget_prayer_status", "id", pkg)
+
+                  if (layoutId == 0) return
+
                   appWidgetIds.forEach { widgetId ->
-                      val views = RemoteViews(context.packageName, R.layout.widget_layout).apply {
+                      val views = RemoteViews(pkg, layoutId).apply {
                           val count = widgetData.getInt("widget_today_count", 0)
                           val hijri = widgetData.getString("widget_hijri_date", "Hijri Date")
                           val greg = widgetData.getString("widget_greg_date", "")
                           val icon = widgetData.getString("widget_celestial_icon", "☀️")
                           val prayer = widgetData.getString("widget_prayer_status", "Salah Open")
 
-                          setTextViewText(R.id.widget_count_text, "Today: $count")
-                          setTextViewText(R.id.widget_hijri_date, hijri)
-                          setTextViewText(R.id.widget_greg_date, greg)
-                          setTextViewText(R.id.widget_celestial_icon, icon)
-                          setTextViewText(R.id.widget_prayer_status, prayer)
+                          if (countId != 0) setTextViewText(countId, "Today: $count")
+                          if (hijriId != 0) setTextViewText(hijriId, hijri)
+                          if (gregId != 0) setTextViewText(gregId, greg)
+                          if (iconId != 0) setTextViewText(iconId, icon)
+                          if (prayerId != 0) setTextViewText(prayerId, prayer)
                       }
                       appWidgetManager.updateAppWidget(widgetId, views)
                   }
@@ -237,7 +246,7 @@ jobs:
           with open(p, 'r') as f:
               c = f.read()
           receiver_xml = '''
-              <receiver android:name=\".TasbihWidgetProvider\" android:exported=\"true\">
+              <receiver android:name=\"es.antonborri.home_widget.TasbihWidgetProvider\" android:exported=\"true\">
                   <intent-filter>
                       <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
                   </intent-filter>
