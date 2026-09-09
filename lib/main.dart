@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' as intl;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,7 +70,7 @@ class WidgetUpdater {
       }
 
       final now = DateTime.now();
-      final gregorian = DateFormat('EEE, d MMM').format(now);
+      final gregorian = intl.DateFormat('EEE, d MMM').format(now);
 
       await HomeWidget.saveWidgetData<int>('today_count', todayCount);
       await HomeWidget.saveWidgetData<String>('status_icon', status['icon'] ?? '☀️');
@@ -222,7 +223,6 @@ class SolarCalculator {
     int sunset = times['sunset']!;
     int iftar = times['iftar']!;
 
-    // ১. সূর্যোদয়ের ১৮ মিনিট
     if (cur >= sunrise && cur < sunrise + 18) {
       return {
         'statusType': 2,
@@ -232,8 +232,6 @@ class SolarCalculator {
         'isIftar': false,
       };
     }
-
-    // ২. যাওয়াল (ঠিক দ্বিপ্রহরের ১২ মিনিট পূর্ব থেকে noon পর্যন্ত)
     if (cur >= noon - 12 && cur < noon) {
       return {
         'statusType': 2,
@@ -243,8 +241,6 @@ class SolarCalculator {
         'isIftar': false,
       };
     }
-
-    // ৩. সূর্যাস্তের পূর্বের ১৫ মিনিট
     if (cur >= sunset - 15 && cur < sunset) {
       return {
         'statusType': 2,
@@ -255,7 +251,6 @@ class SolarCalculator {
       };
     }
 
-    // ৪. ইফতার সময় (সূর্যাস্ত + ১ মিনিট থেকে পরবর্তী ৩৫ মিনিট)
     if (cur >= iftar && cur < iftar + 35) {
       return {
         'statusType': 1,
@@ -266,7 +261,6 @@ class SolarCalculator {
       };
     }
 
-    // ৫. সেহরি কাউন্টডাউন (শেষ হওয়ার ৬০ মিনিট আগে থেকে)
     if (cur >= sehriEnd - 60 && cur <= sehriEnd) {
       int left = sehriEnd - cur;
       return {
@@ -1613,7 +1607,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                       Text(
                         currentDhikr.arabic,
                         textAlign: TextAlign.center,
-                        textDirection: TextDirection.rtl,
+                        textDirection: ui.TextDirection.rtl,
                         style: TextStyle(
                           fontSize: 24 * _fontScale,
                           fontWeight: FontWeight.w600,
