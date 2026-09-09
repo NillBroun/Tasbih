@@ -7,9 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:home_widget/home_widget.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const TasbihApp());
 }
 
@@ -353,16 +353,12 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initAudioSafe();
     _loadAllData().then((_) {
       _checkTimeNoticePrompt();
+      Future.delayed(const Duration(milliseconds: 600), () {
+        _syncWidgetSafely();
+      });
     });
-  }
-
-  void _initAudioSafe() {
-    try {
-      _audioPlayer = AudioPlayer();
-    } catch (_) {}
   }
 
   @override
@@ -378,7 +374,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       _saveAllData();
-      _syncWidget();
+      _syncWidgetSafely();
     }
   }
 
@@ -426,7 +422,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       }
 
       if (mounted) setState(() {});
-      _syncWidget();
     } catch (_) {}
   }
 
@@ -548,7 +543,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     } catch (_) {}
   }
 
-  Future<void> _syncWidget() async {
+  Future<void> _syncWidgetSafely() async {
     try {
       final now = DateTime.now();
       final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
@@ -567,7 +562,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
       await HomeWidget.updateWidget(
         name: 'TasbihWidgetProvider',
-        androidName: 'es.antonborri.home_widget.TasbihWidgetProvider',
+        androidName: 'com.ahm.tasbih.TasbihWidgetProvider',
       );
     } catch (_) {}
   }
@@ -585,8 +580,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void _onTapCounter() {
     if (_dhikrList.isEmpty) return;
 
-    if (_isSoundOn && _audioPlayer != null) {
+    if (_isSoundOn) {
       try {
+        _audioPlayer ??= AudioPlayer();
         _audioPlayer!.play(AssetSource('audio/click.wav'));
       } catch (_) {}
     }
@@ -609,7 +605,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     });
 
     _saveAllData();
-    _syncWidget();
+    _syncWidgetSafely();
   }
 
   void _resetCurrentCount() {
@@ -811,7 +807,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                   _currentCount = 0;
                 });
                 _saveAllData();
-                _syncWidget();
+                _syncWidgetSafely();
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Data restored successfully!')),
@@ -863,7 +859,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     autofocus: false,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Search country (e.g., India, Pakistan, Saudi Arabia)...',
+                      hintText: 'Search country...',
                       hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                       prefixIcon: const Icon(Icons.search, color: Color(0xFF00B074)),
                       filled: true,
@@ -898,11 +894,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                           });
                           setSettingsState(() {});
                           _saveAllData();
-                          _syncWidget();
+                          _syncWidgetSafely();
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Country set to: ${country.name}')),
-                          );
                         },
                         leading: Icon(
                           Icons.public,
@@ -1101,14 +1094,14 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               TextField(
                 controller: meaningCtrl,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Meaning (Translation)', labelStyle: TextStyle(color: Colors.white60)),
+                decoration: const InputDecoration(labelText: 'Meaning', labelStyle: TextStyle(color: Colors.white60)),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: targetCtrl,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Target Count (e.g., 33, 100, 0 for ∞)', labelStyle: TextStyle(color: Colors.white60)),
+                decoration: const InputDecoration(labelText: 'Target Count', labelStyle: TextStyle(color: Colors.white60)),
               ),
             ],
           ),
@@ -1226,7 +1219,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _syncWidgetSafely();
                                     }
                                   },
                                 ),
@@ -1259,7 +1252,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _syncWidgetSafely();
                                     }
                                   },
                                 ),
@@ -1332,7 +1325,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             setState(() => _hijriOffset = offset);
                             setSettingsState(() {});
                             _saveAllData();
-                            _syncWidget();
+                            _syncWidgetSafely();
                           },
                         );
                       }).toList(),
