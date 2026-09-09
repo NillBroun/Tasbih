@@ -174,7 +174,7 @@ jobs:
           </shape>
           EOF
 
-          # ৩. উইজেট ইনফো কনফিগারেশন XML
+          # ৩. উইজেট মেটা কনফিগারেশন XML
           cat << 'EOF' > android/app/src/main/res/xml/glance_widget_info.xml
           <?xml version="1.0" encoding="utf-8"?>
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
@@ -186,33 +186,34 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # ৪. GlanceWidgetProvider Kotlin ক্লাস (অ্যাপ লঞ্চ ও কালার সিঙ্ক সহ)
+          # ৪. GlanceWidgetProvider Kotlin ক্লাস (স্ট্যান্ডার্ড অ্যান্ড্রয়েড AppWidgetProvider ব্যবহার করে)
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/GlanceWidgetProvider.kt
           package com.ahm.tasbih
 
           import android.app.PendingIntent
           import android.appwidget.AppWidgetManager
+          import android.appwidget.AppWidgetProvider
           import android.content.Context
           import android.content.SharedPreferences
           import android.widget.RemoteViews
-          import es.antonborries.home_widget.HomeWidgetProvider
           import com.ahm.tasbih.R
 
-          class GlanceWidgetProvider : HomeWidgetProvider() {
+          class GlanceWidgetProvider : AppWidgetProvider() {
               override fun onUpdate(
                   context: Context,
                   appWidgetManager: AppWidgetManager,
-                  appWidgetIds: IntArray,
-                  widgetData: SharedPreferences
+                  appWidgetIds: IntArray
               ) {
+                  val widgetData: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+
                   for (appWidgetId in appWidgetIds) {
                       val views = RemoteViews(context.packageName, R.layout.glance_widget_layout).apply {
-                          val todayCount = widgetData.getInt("today_count", 0)
-                          val statusIcon = widgetData.getString("status_icon", "☀️") ?: "☀️"
-                          val statusTitle = widgetData.getString("status_title", "Salah Open") ?: "Salah Open"
-                          val hijriText = widgetData.getString("hijri_date", "") ?: ""
-                          val gregorianText = widgetData.getString("gregorian_date", "") ?: ""
-                          val pillState = widgetData.getString("status_pill_state", "DEFAULT") ?: "DEFAULT"
+                          val todayCount = widgetData.getInt("flutter.today_count", 0)
+                          val statusIcon = widgetData.getString("flutter.status_icon", "☀️") ?: "☀️"
+                          val statusTitle = widgetData.getString("flutter.status_title", "Salah Open") ?: "Salah Open"
+                          val hijriText = widgetData.getString("flutter.hijri_date", "") ?: ""
+                          val gregorianText = widgetData.getString("flutter.gregorian_date", "") ?: ""
+                          val pillState = widgetData.getString("flutter.status_pill_state", "DEFAULT") ?: "DEFAULT"
 
                           setTextViewText(R.id.widget_tasbih_text, "Today: $todayCount")
                           setTextViewText(R.id.widget_status_icon, statusIcon)
@@ -243,7 +244,7 @@ jobs:
           }
           EOF
 
-          # ৫. AndroidManifest.xml-এ রিসিভার যোগ করা (কোনো ডুপ্লিকেট ছাড়া)
+          # ৫. AndroidManifest.xml-এ রিসিভার ইনজেকশন
           python3 -c "
           p = 'android/app/src/main/AndroidManifest.xml'
           with open(p, 'r') as f:
@@ -251,7 +252,7 @@ jobs:
 
           receiver = '''
                   <receiver
-                      android:name=\"com.ahm.tasbih.GlanceWidgetProvider\"
+                      android:name=\".GlanceWidgetProvider\"
                       android:exported=\"true\">
                       <intent-filter>
                           <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
