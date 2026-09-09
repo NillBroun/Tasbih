@@ -54,83 +54,83 @@ class CountryPreset {
 
 class SolarCalculator {
   static const List<CountryPreset> worldCountries = [
-    CountryPreset("Bangladesh (বাংলাদেশ)", 23.8103, 90.4125),
-    CountryPreset("Saudi Arabia (সৌদি আরব)", 24.7136, 46.6753),
-    CountryPreset("India (ভারত)", 28.6139, 77.2090),
-    CountryPreset("Pakistan (পাকিস্তান)", 33.6844, 73.0479),
-    CountryPreset("United Arab Emirates (ইউএই)", 24.4539, 54.3773),
-    CountryPreset("Afghanistan (আফগানিস্তান)", 34.5553, 69.2075),
-    CountryPreset("Albania (আলবেনিয়া)", 41.3275, 19.8187),
-    CountryPreset("Algeria (আলজেরিয়া)", 36.7538, 3.0588),
-    CountryPreset("Argentina (আর্জেন্টিনা)", -34.6037, -58.3816),
-    CountryPreset("Australia (অস্ট্রেলিয়া)", -35.2809, 149.1300),
-    CountryPreset("Austria (অস্ট্রিয়া)", 48.2082, 16.3738),
-    CountryPreset("Azerbaijan (আজারবাইজান)", 40.4093, 49.8671),
-    CountryPreset("Bahrain (বাহরাইন)", 26.2285, 50.5860),
-    CountryPreset("Belgium (বেলজিয়াম)", 50.8503, 4.3517),
-    CountryPreset("Bosnia and Herzegovina (বসনিয়া)", 43.8563, 18.4131),
-    CountryPreset("Brazil (ব্রাজিল)", -15.7975, -47.8919),
-    CountryPreset("Brunei (ব্রুনাই)", 4.9031, 114.9398),
-    CountryPreset("Canada (কানাডা)", 45.4215, -75.6972),
-    CountryPreset("China (চীন)", 39.9042, 116.4074),
-    CountryPreset("Cyprus (সাইপ্রাস)", 35.1856, 33.3823),
-    CountryPreset("Denmark (ডেনমার্ক)", 55.6761, 12.5683),
-    CountryPreset("Egypt (মিশর)", 30.0444, 31.2357),
-    CountryPreset("Finland (ফিনল্যান্ড)", 60.1699, 24.9384),
-    CountryPreset("France (ফ্রান্স)", 48.8566, 2.3522),
-    CountryPreset("Germany (জার্মানি)", 52.5200, 13.4050),
-    CountryPreset("Ghana (ঘানা)", 5.6037, -0.1870),
-    CountryPreset("Greece (গ্রিস)", 37.9838, 23.7275),
-    CountryPreset("Hong Kong (হংকং)", 22.3193, 114.1694),
-    CountryPreset("Indonesia (ইন্দোনেশিয়া)", -6.2088, 106.8456),
-    CountryPreset("Iran (ইরান)", 35.6892, 51.3890),
-    CountryPreset("Iraq (ইরাক)", 33.3152, 44.3661),
-    CountryPreset("Ireland (আয়ারল্যান্ড)", 53.3498, -6.2603),
-    CountryPreset("Italy (ইতালি)", 41.9028, 12.4964),
-    CountryPreset("Japan (জাপান)", 35.6762, 139.6503),
-    CountryPreset("Jordan (জর্ডান)", 31.9454, 35.9284),
-    CountryPreset("Kazakhstan (কাজাখস্তান)", 51.1694, 71.4491),
-    CountryPreset("Kenya (কেনিয়া)", -1.2921, 36.8219),
-    CountryPreset("Kuwait (কুয়েত)", 29.3759, 47.9774),
-    CountryPreset("Kyrgyzstan (কিরগিজস্তান)", 42.8746, 74.5698),
-    CountryPreset("Lebanon (লেবানন)", 33.8938, 35.5018),
-    CountryPreset("Libya (লিবিয়া)", 32.8872, 13.1913),
-    CountryPreset("Malaysia (মালয়েশিয়া)", 3.1390, 101.6869),
-    CountryPreset("Maldives (মালদ্বীপ)", 4.1755, 73.5093),
-    CountryPreset("Morocco (মরক্কো)", 34.0209, -6.8416),
-    CountryPreset("Myanmar (মিয়ানমার)", 19.7633, 96.0785),
-    CountryPreset("Nepal (নেপাল)", 27.7172, 85.3240),
-    CountryPreset("Netherlands (নেদারল্যান্ডস)", 52.3676, 4.9041),
-    CountryPreset("New Zealand (নিউজিল্যান্ড)", -41.2865, 174.7762),
-    CountryPreset("Nigeria (নাইজেরিয়া)", 9.0765, 7.3986),
-    CountryPreset("Norway (নরওয়ে)", 59.9139, 10.7522),
-    CountryPreset("Oman (ওমান)", 23.5859, 58.4059),
-    CountryPreset("Palestine (ফিলিস্তিন)", 31.7683, 35.2137),
-    CountryPreset("Philippines (ফিলিপাইন)", 14.5995, 120.9842),
-    CountryPreset("Poland (পোল্যান্ড)", 52.2297, 21.0122),
-    CountryPreset("Portugal (পর্তুগাল)", 38.7223, -9.1393),
-    CountryPreset("Qatar (কাতার)", 25.2854, 51.5310),
-    CountryPreset("Russia (রাশিয়া)", 55.7558, 37.6173),
-    CountryPreset("Singapore (সিঙ্গাপুর)", 1.3521, 103.8198),
-    CountryPreset("South Africa (দক্ষিণ আফ্রিকা)", -25.7479, 28.2293),
-    CountryPreset("South Korea (দক্ষিণ কোরিয়া)", 37.5665, 126.9780),
-    CountryPreset("Spain (স্পেন)", 40.4168, -3.7038),
-    CountryPreset("Sri Lanka (শ্রীলঙ্কা)", 6.9271, 79.8612),
-    CountryPreset("Sudan (সুদান)", 15.5007, 32.5599),
-    CountryPreset("Sweden (সুইডেন)", 59.3293, 18.0686),
-    CountryPreset("Switzerland (সুইজারল্যান্ড)", 46.9480, 7.4474),
-    CountryPreset("Syria (সিরিয়া)", 33.5138, 36.2765),
-    CountryPreset("Taiwan (তাইওয়ান)", 25.0330, 121.5654),
-    CountryPreset("Tajikistan (তাজিকিস্তান)", 38.5598, 68.7870),
-    CountryPreset("Thailand (থাইল্যান্ড)", 13.7563, 100.5018),
-    CountryPreset("Tunisia (তিউনিসিয়া)", 36.8065, 10.1815),
-    CountryPreset("Turkey (তুরস্ক)", 39.9334, 32.8597),
-    CountryPreset("Turkmenistan (তুর্কমেনিস্তান)", 37.9601, 58.3261),
-    CountryPreset("Uganda (উগান্ডা)", 0.3476, 32.5825),
-    CountryPreset("United Kingdom (যুক্তরাজ্য)", 51.5074, -0.1278),
-    CountryPreset("United States (আমেরিকা)", 38.9072, -77.0369),
-    CountryPreset("Uzbekistan (উজবেকিস্তান)", 41.2995, 69.2401),
-    CountryPreset("Yemen (ইয়েমেন)", 15.3694, 44.1910),
+    CountryPreset("Afghanistan", 34.5553, 69.2075),
+    CountryPreset("Albania", 41.3275, 19.8187),
+    CountryPreset("Algeria", 36.7538, 3.0588),
+    CountryPreset("Argentina", -34.6037, -58.3816),
+    CountryPreset("Australia", -35.2809, 149.1300),
+    CountryPreset("Austria", 48.2082, 16.3738),
+    CountryPreset("Azerbaijan", 40.4093, 49.8671),
+    CountryPreset("Bahrain", 26.2285, 50.5860),
+    CountryPreset("Bangladesh", 23.8103, 90.4125),
+    CountryPreset("Belgium", 50.8503, 4.3517),
+    CountryPreset("Bosnia and Herzegovina", 43.8563, 18.4131),
+    CountryPreset("Brazil", -15.7975, -47.8919),
+    CountryPreset("Brunei", 4.9031, 114.9398),
+    CountryPreset("Canada", 45.4215, -75.6972),
+    CountryPreset("China", 39.9042, 116.4074),
+    CountryPreset("Cyprus", 35.1856, 33.3823),
+    CountryPreset("Denmark", 55.6761, 12.5683),
+    CountryPreset("Egypt", 30.0444, 31.2357),
+    CountryPreset("Finland", 60.1699, 24.9384),
+    CountryPreset("France", 48.8566, 2.3522),
+    CountryPreset("Germany", 52.5200, 13.4050),
+    CountryPreset("Ghana", 5.6037, -0.1870),
+    CountryPreset("Greece", 37.9838, 23.7275),
+    CountryPreset("Hong Kong", 22.3193, 114.1694),
+    CountryPreset("India", 28.6139, 77.2090),
+    CountryPreset("Indonesia", -6.2088, 106.8456),
+    CountryPreset("Iran", 35.6892, 51.3890),
+    CountryPreset("Iraq", 33.3152, 44.3661),
+    CountryPreset("Ireland", 53.3498, -6.2603),
+    CountryPreset("Italy", 41.9028, 12.4964),
+    CountryPreset("Japan", 35.6762, 139.6503),
+    CountryPreset("Jordan", 31.9454, 35.9284),
+    CountryPreset("Kazakhstan", 51.1694, 71.4491),
+    CountryPreset("Kenya", -1.2921, 36.8219),
+    CountryPreset("Kuwait", 29.3759, 47.9774),
+    CountryPreset("Kyrgyzstan", 42.8746, 74.5698),
+    CountryPreset("Lebanon", 33.8938, 35.5018),
+    CountryPreset("Libya", 32.8872, 13.1913),
+    CountryPreset("Malaysia", 3.1390, 101.6869),
+    CountryPreset("Maldives", 4.1755, 73.5093),
+    CountryPreset("Morocco", 34.0209, -6.8416),
+    CountryPreset("Myanmar", 19.7633, 96.0785),
+    CountryPreset("Nepal", 27.7172, 85.3240),
+    CountryPreset("Netherlands", 52.3676, 4.9041),
+    CountryPreset("New Zealand", -41.2865, 174.7762),
+    CountryPreset("Nigeria", 9.0765, 7.3986),
+    CountryPreset("Norway", 59.9139, 10.7522),
+    CountryPreset("Oman", 23.5859, 58.4059),
+    CountryPreset("Pakistan", 33.6844, 73.0479),
+    CountryPreset("Palestine", 31.7683, 35.2137),
+    CountryPreset("Philippines", 14.5995, 120.9842),
+    CountryPreset("Poland", 52.2297, 21.0122),
+    CountryPreset("Portugal", 38.7223, -9.1393),
+    CountryPreset("Qatar", 25.2854, 51.5310),
+    CountryPreset("Russia", 55.7558, 37.6173),
+    CountryPreset("Saudi Arabia", 24.7136, 46.6753),
+    CountryPreset("Singapore", 1.3521, 103.8198),
+    CountryPreset("South Africa", -25.7479, 28.2293),
+    CountryPreset("South Korea", 37.5665, 126.9780),
+    CountryPreset("Spain", 40.4168, -3.7038),
+    CountryPreset("Sri Lanka", 6.9271, 79.8612),
+    CountryPreset("Sudan", 15.5007, 32.5599),
+    CountryPreset("Sweden", 59.3293, 18.0686),
+    CountryPreset("Switzerland", 46.9480, 7.4474),
+    CountryPreset("Syria", 33.5138, 36.2765),
+    CountryPreset("Taiwan", 25.0330, 121.5654),
+    CountryPreset("Tajikistan", 38.5598, 68.7870),
+    CountryPreset("Thailand", 13.7563, 100.5018),
+    CountryPreset("Tunisia", 36.8065, 10.1815),
+    CountryPreset("Turkey", 39.9334, 32.8597),
+    CountryPreset("Turkmenistan", 37.9601, 58.3261),
+    CountryPreset("Uganda", 0.3476, 32.5825),
+    CountryPreset("United Arab Emirates", 24.4539, 54.3773),
+    CountryPreset("United Kingdom", 51.5074, -0.1278),
+    CountryPreset("United States", 38.9072, -77.0369),
+    CountryPreset("Uzbekistan", 41.2995, 69.2401),
+    CountryPreset("Yemen", 15.3694, 44.1910),
   ];
 
   static Map<String, int> getTimes(DateTime date, {required double lat, required double lng, int offsetMin = 0}) {
@@ -299,7 +299,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   double _fontScale = 1.0;
   int _hijriOffset = 0;
 
-  String _countryName = "Bangladesh (বাংলাদেশ)";
+  String _countryName = "Bangladesh";
   double _userLat = 23.8103;
   double _userLng = 90.4125;
   int _districtOffsetMin = 0;
@@ -340,7 +340,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _fontScale = prefs.getDouble('fontScale') ?? 1.0;
       _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
 
-      _countryName = prefs.getString('countryName') ?? "Bangladesh (বাংলাদেশ)";
+      _countryName = prefs.getString('countryName') ?? "Bangladesh";
       _userLat = prefs.getDouble('userLat') ?? 23.8103;
       _userLng = prefs.getDouble('userLng') ?? 90.4125;
       _districtOffsetMin = prefs.getInt('districtOffsetMin') ?? 0;
@@ -536,7 +536,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       final today = _getTodayKey();
       _dailyHistory[today] = (_dailyHistory[today] ?? 0) + 1;
 
-      // টার্গেট পূর্ণ হলে শুধু একবার ভারী ভাইব্রেশন
       final target = _dhikrList[_currentIndex].target;
       if (target > 0 && _currentCount == target) {
         HapticFeedback.heavyImpact();
@@ -1163,7 +1162,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget(); // উইজেটে অফসেট তাৎক্ষণিক আপডেট হবে
+                                      _syncWidget();
                                     }
                                   },
                                 ),
@@ -1196,7 +1195,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget(); // উইজেটে অফসেট তাৎক্ষণিক আপডেট হবে
+                                      _syncWidget();
                                     }
                                   },
                                 ),
