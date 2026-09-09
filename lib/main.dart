@@ -536,6 +536,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       final today = _getTodayKey();
       _dailyHistory[today] = (_dailyHistory[today] ?? 0) + 1;
 
+      // টার্গেট পূর্ণ হলে শুধুমাত্র ভারী ভাইব্রেশন
       final target = _dhikrList[_currentIndex].target;
       if (target > 0 && _currentCount == target) {
         HapticFeedback.heavyImpact();
@@ -1401,7 +1402,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF00B074))),
+            child: const Text('Close', style: TextStyle(color: Color(0xFF00B074)),
           ),
         ],
       ),
