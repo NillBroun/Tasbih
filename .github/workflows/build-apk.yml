@@ -57,7 +57,7 @@ jobs:
             cp -r ../Tasbih/assets/icon/* ./assets/icon/
           fi
 
-      - name: Inject Safe Android Native Widget Files
+      - name: Inject Android Native Widget Files
         run: |
           cd ../tasbih_fresh
 
@@ -105,13 +105,6 @@ jobs:
                       android:textColor="#00B074"
                       android:textSize="12sp"
                       android:textStyle="bold"
-                      android:layout_marginStart="4dp" />
-                  <TextView
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="[+]"
-                      android:textColor="#FFFFFF"
-                      android:textSize="11sp"
                       android:layout_marginStart="4dp" />
               </LinearLayout>
 
@@ -173,27 +166,24 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # Safe Native Kotlin Widget Provider that never crashes the app
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
-          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
-          package com.ahm.tasbih
+          mkdir -p android/app/src/main/kotlin/es/antonborri/home_widget
+          cat << 'EOF' > android/app/src/main/kotlin/es/antonborri/home_widget/TasbihWidgetProvider.kt
+          package es.antonborri.home_widget
 
           import android.appwidget.AppWidgetManager
-          import android.appwidget.AppWidgetProvider
           import android.content.Context
           import android.content.SharedPreferences
           import android.widget.RemoteViews
 
-          class TasbihWidgetProvider : AppWidgetProvider() {
+          class TasbihWidgetProvider : HomeWidgetProvider() {
               override fun onUpdate(
                   context: Context,
                   appWidgetManager: AppWidgetManager,
-                  appWidgetIds: IntArray
+                  appWidgetIds: IntArray,
+                  widgetData: SharedPreferences
               ) {
                   try {
                       val pkg = context.packageName
-                      val prefs: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-
                       val layoutId = context.resources.getIdentifier("widget_layout", "layout", pkg)
                       val countId = context.resources.getIdentifier("widget_count_text", "id", pkg)
                       val hijriId = context.resources.getIdentifier("widget_hijri_date", "id", pkg)
@@ -203,24 +193,23 @@ jobs:
 
                       if (layoutId == 0) return
 
-                      for (widgetId in appWidgetIds) {
-                          val views = RemoteViews(pkg, layoutId)
+                      appWidgetIds.forEach { widgetId ->
+                          val views = RemoteViews(pkg, layoutId).apply {
+                              val count = widgetData.getInt("widget_today_count", 0)
+                              val hijri = widgetData.getString("widget_hijri_date", "Hijri Date")
+                              val greg = widgetData.getString("widget_greg_date", "")
+                              val icon = widgetData.getString("widget_status_icon", "☀️")
+                              val title = widgetData.getString("widget_status_title", "Salah Open")
 
-                          val count = prefs.getLong("flutter.widget_today_count", 0L)
-                          val hijri = prefs.getString("flutter.widget_hijri_date", "Hijri Date") ?: "Hijri Date"
-                          val greg = prefs.getString("flutter.widget_greg_date", "") ?: ""
-                          val icon = prefs.getString("flutter.widget_status_icon", "☀️") ?: "☀️"
-                          val title = prefs.getString("flutter.widget_status_title", "Salah Open") ?: "Salah Open"
-
-                          if (countId != 0) views.setTextViewText(countId, "Today: $count")
-                          if (hijriId != 0) views.setTextViewText(hijriId, hijri)
-                          if (gregId != 0) views.setTextViewText(gregId, greg)
-                          if (iconId != 0) views.setTextViewText(iconId, icon)
-                          if (titleId != 0) views.setTextViewText(titleId, title)
-
+                              if (countId != 0) setTextViewText(countId, "Today: $count")
+                              if (hijriId != 0) setTextViewText(hijriId, hijri)
+                              if (gregId != 0) setTextViewText(gregId, greg)
+                              if (iconId != 0) setTextViewText(iconId, icon)
+                              if (titleId != 0) setTextViewText(titleId, title)
+                          }
                           appWidgetManager.updateAppWidget(widgetId, views)
                       }
-                  } catch (_: Exception) {}
+                  } catch (e: Exception) {}
               }
           }
           EOF
@@ -251,7 +240,7 @@ jobs:
           with open(p, 'r') as f:
               c = f.read()
           receiver_xml = '''
-              <receiver android:name=\"com.ahm.tasbih.TasbihWidgetProvider\" android:exported=\"true\">
+              <receiver android:name=\"es.antonborri.home_widget.TasbihWidgetProvider\" android:exported=\"true\">
                   <intent-filter>
                       <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
                   </intent-filter>
