@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -330,14 +329,10 @@ class TasbihHomeScreen extends StatefulWidget {
 }
 
 class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBindingObserver {
-  AudioPlayer? _audioPlayer;
-
   List<DhikrItem> _dhikrList = [];
   int _currentIndex = 0;
   int _currentCount = 0;
 
-  bool _isSoundOn = true;
-  bool _isVibrateOn = true;
   double _fontScale = 1.0;
   int _hijriOffset = 0;
 
@@ -360,9 +355,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    try {
-      _audioPlayer?.dispose();
-    } catch (_) {}
     super.dispose();
   }
 
@@ -381,8 +373,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   Future<void> _loadAllData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _isSoundOn = prefs.getBool('isSoundOn') ?? true;
-      _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
       _fontScale = prefs.getDouble('fontScale') ?? 1.0;
       _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
 
@@ -401,7 +391,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       } else {
         _dhikrList = [
           DhikrItem(title: "Subhanallah", arabic: "سُبْحَانَ ٱللَّٰهِ", meaning: "Glory be to Allah", target: 33),
-          DhikrItem(title: "Alhamdulillah", arabic: "ٱلْحَمْدُ লِلَّٰهِ", meaning: "Praise be to Allah", target: 33),
+          DhikrItem(title: "Alhamdulillah", arabic: "ٱلْحَمْدُ لِلَّٰهِ", meaning: "Praise be to Allah", target: 33),
           DhikrItem(title: "Allahu Akbar", arabic: "ٱللَّٰهُ أَكْبَرُ", meaning: "Allah is the Greatest", target: 34),
           DhikrItem(title: "Kalima Tayyibah", arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ", meaning: "There is no god but Allah, Muhammad is the Messenger of Allah", target: 100),
           DhikrItem(title: "Astaghfirullah", arabic: "أَسْتَغْفِرُ ٱللَّٰهَ", meaning: "I seek forgiveness from Allah", target: 100),
@@ -521,8 +511,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   Future<void> _saveAllData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isSoundOn', _isSoundOn);
-      await prefs.setBool('isVibrateOn', _isVibrateOn);
       await prefs.setDouble('fontScale', _fontScale);
       await prefs.setInt('hijriOffset', _hijriOffset);
 
@@ -541,28 +529,12 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void _onTapCounter() {
     if (_dhikrList.isEmpty) return;
 
-    if (_isSoundOn) {
-      try {
-        _audioPlayer ??= AudioPlayer();
-        _audioPlayer!.play(AssetSource('audio/click.wav'));
-      } catch (_) {}
-    }
-
-    if (_isVibrateOn) {
-      HapticFeedback.lightImpact();
-    }
-
     setState(() {
       _currentCount++;
       _dhikrList[_currentIndex].lifetimeCount++;
 
       final today = _getTodayKey();
       _dailyHistory[today] = (_dailyHistory[today] ?? 0) + 1;
-
-      final target = _dhikrList[_currentIndex].target;
-      if (target > 0 && _currentCount == target) {
-        if (_isVibrateOn) HapticFeedback.heavyImpact();
-      }
     });
 
     _saveAllData();
@@ -654,7 +626,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Backup with PIN / Password', style: TextStyle(color: Colors.white)),
         content: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: minAxisSize,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -704,6 +676,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       ),
     );
   }
+
+  static const MainAxisSize minAxisSize = MainAxisSize.min;
 
   void _showEncryptedRestoreDialog() {
     final pinCtrl = TextEditingController();
@@ -1220,30 +1194,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     ),
                     const Divider(color: Colors.white12),
 
-                    SwitchListTile(
-                      activeColor: const Color(0xFF00B074),
-                      title: const Text('Sound Feedback', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('Play click sound on each count', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      value: _isSoundOn,
-                      onChanged: (val) {
-                        setState(() => _isSoundOn = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                      },
-                    ),
-                    SwitchListTile(
-                      activeColor: const Color(0xFF00B074),
-                      title: const Text('Vibration Feedback', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('Light haptic impact on tap', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      value: _isVibrateOn,
-                      onChanged: (val) {
-                        setState(() => _isVibrateOn = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                      },
-                    ),
-                    const Divider(color: Colors.white12),
-
                     ListTile(
                       title: const Text('Font Size Scaling', style: TextStyle(color: Colors.white)),
                       subtitle: Text('Current: ${(_fontScale * 100).toInt()}%', style: const TextStyle(color: Colors.white60, fontSize: 12)),
@@ -1675,17 +1625,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                         ),
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(
-                        _isSoundOn ? Icons.volume_up : Icons.volume_off,
-                        color: _isSoundOn ? const Color(0xFF00B074) : Colors.white38,
-                        size: 26,
-                      ),
-                      onPressed: () {
-                        setState(() => _isSoundOn = !_isSoundOn);
-                        _saveAllData();
-                      },
-                    ),
+                    const SizedBox(width: 26),
                   ],
                 ),
               ),
