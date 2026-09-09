@@ -24,14 +24,12 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Recreate Android Project with Correct Package ID
+      - name: Recreate Android Project with Clean Structure
         run: |
-          # Clean any damaged android files
           rm -rf android
-          # Recreate android structure with exact package ID com.ahm.tasbih
-          flutter create --platforms=android --org com.ahm .
+          flutter create --platforms=android --org com.ahm --project-name tasbih .
 
-      - name: Generate Click Audio Asset Automatically
+      - name: Generate Click Audio Asset
         run: |
           mkdir -p assets/audio
           python3 -c "
@@ -50,12 +48,12 @@ jobs:
                   f.writeframes(struct.pack('<h', max(-32768, min(32767, sample))))
           "
 
-      - name: Generate Launcher Icons
+      - name: Setup Launcher Icons
         run: |
           flutter pub get
           dart run flutter_launcher_icons
 
-      - name: Inject Android Native Widget Layout & XML
+      - name: Inject Android Native Widget Files
         run: |
           mkdir -p android/app/src/main/res/layout
           mkdir -p android/app/src/main/res/xml
@@ -154,15 +152,12 @@ jobs:
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
               android:minWidth="250dp"
               android:minHeight="48dp"
-              android:targetCellWidth="4"
-              android:targetCellHeight="1"
               android:updatePeriodMillis="1800000"
               android:initialLayout="@layout/widget_layout"
               android:resizeMode="horizontal"
               android:widgetCategory="home_screen" />
           EOF
 
-          # Create Kotlin Widget Provider in exact package directory
           mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
           package com.ahm.tasbih
@@ -216,10 +211,8 @@ jobs:
 
       - name: Configure Android Manifest and Signing
         run: |
-          # 1. Ensure Display Name is Capital 'Tasbih'
           sed -i 's/android:label="[^"]*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
 
-          # 2. Inject Widget Receiver cleanly before </application>
           python3 -c "
           p = 'android/app/src/main/AndroidManifest.xml'
           with open(p, 'r') as f:
@@ -237,7 +230,6 @@ jobs:
               f.write(c)
           "
 
-          # 3. Configure Release signing to debug keystore so it installs everywhere
           python3 -c "
           p = 'android/app/build.gradle.kts'
           try:
