@@ -39,7 +39,7 @@ jobs:
           mkdir -p android/app/src/main/res/layout
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/xml
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
+          mkdir -p android/app/src/main/java/com/ahm/tasbih
 
           # ১. উইজেট XML লেআউট
           cat << 'EOF' > android/app/src/main/res/layout/glance_widget_layout.xml
@@ -174,7 +174,7 @@ jobs:
           </shape>
           EOF
 
-          # ৩. উইজেট মেটা কনফিগারেশন XML
+          # ৩. উইজেট ইনফো XML
           cat << 'EOF' > android/app/src/main/res/xml/glance_widget_info.xml
           <?xml version="1.0" encoding="utf-8"?>
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
@@ -186,65 +186,83 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # ৪. GlanceWidgetProvider Kotlin ক্লাস (স্ট্যান্ডার্ড অ্যান্ড্রয়েড AppWidgetProvider ব্যবহার করে)
-          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/GlanceWidgetProvider.kt
-          package com.ahm.tasbih
+          # ৪. GlanceWidgetProvider (ক্র্যাশ-প্রুফ স্ট্যান্ডার্ড জাভা ও সেফ টাইপ-কাস্টিং)
+          cat << 'EOF' > android/app/src/main/java/com/ahm/tasbih/GlanceWidgetProvider.java
+          package com.ahm.tasbih;
 
-          import android.app.PendingIntent
-          import android.appwidget.AppWidgetManager
-          import android.appwidget.AppWidgetProvider
-          import android.content.Context
-          import android.content.SharedPreferences
-          import android.widget.RemoteViews
-          import com.ahm.tasbih.R
+          import android.app.PendingIntent;
+          import android.appwidget.AppWidgetManager;
+          import android.appwidget.AppWidgetProvider;
+          import android.content.ComponentName;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.SharedPreferences;
+          import android.widget.RemoteViews;
 
-          class GlanceWidgetProvider : AppWidgetProvider() {
-              override fun onUpdate(
-                  context: Context,
-                  appWidgetManager: AppWidgetManager,
-                  appWidgetIds: IntArray
-              ) {
-                  val widgetData: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-
-                  for (appWidgetId in appWidgetIds) {
-                      val views = RemoteViews(context.packageName, R.layout.glance_widget_layout).apply {
-                          val todayCount = widgetData.getInt("flutter.today_count", 0)
-                          val statusIcon = widgetData.getString("flutter.status_icon", "☀️") ?: "☀️"
-                          val statusTitle = widgetData.getString("flutter.status_title", "Salah Open") ?: "Salah Open"
-                          val hijriText = widgetData.getString("flutter.hijri_date", "") ?: ""
-                          val gregorianText = widgetData.getString("flutter.gregorian_date", "") ?: ""
-                          val pillState = widgetData.getString("flutter.status_pill_state", "DEFAULT") ?: "DEFAULT"
-
-                          setTextViewText(R.id.widget_tasbih_text, "Today: $todayCount")
-                          setTextViewText(R.id.widget_status_icon, statusIcon)
-                          setTextViewText(R.id.widget_status_title, statusTitle)
-                          setTextViewText(R.id.widget_hijri_text, hijriText)
-                          setTextViewText(R.id.widget_gregorian_text, gregorianText)
-
-                          when (pillState) {
-                              "RED" -> setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_red)
-                              "GREEN" -> setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_green)
-                              else -> setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_default)
-                          }
-
-                          val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                          if (launchIntent != null) {
-                              val pendingIntent = PendingIntent.getActivity(
-                                  context,
-                                  0,
-                                  launchIntent,
-                                  PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                              )
-                              setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-                          }
+          public class GlanceWidgetProvider extends AppWidgetProvider {
+              @Override
+              public void onReceive(Context context, Intent intent) {
+                  try {
+                      super.onReceive(context, intent);
+                      AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+                      ComponentName thisWidget = new ComponentName(context, GlanceWidgetProvider.class);
+                      int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
+                      if (appWidgetIds != null && appWidgetIds.length > 0) {
+                          onUpdate(context, appWidgetManager, appWidgetIds);
                       }
-                      appWidgetManager.updateAppWidget(appWidgetId, views)
+                  } catch (Exception ignored) {}
+              }
+
+              @Override
+              public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+                  SharedPreferences prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE);
+
+                  for (int appWidgetId : appWidgetIds) {
+                      try {
+                          RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.glance_widget_layout);
+
+                          long todayCount = 0L;
+                          Object countObj = prefs.getAll().get("flutter.widget_today_count");
+                          if (countObj instanceof Number) {
+                              todayCount = ((Number) countObj).longValue();
+                          }
+
+                          String statusIcon = prefs.getString("flutter.widget_status_icon", "☀️");
+                          String statusTitle = prefs.getString("flutter.widget_status_title", "Salah Open");
+                          String hijriText = prefs.getString("flutter.widget_hijri_date", "");
+                          String gregorianText = prefs.getString("flutter.widget_gregorian_date", "");
+                          String pillState = prefs.getString("flutter.widget_status_pill_state", "DEFAULT");
+
+                          views.setTextViewText(R.id.widget_tasbih_text, "Today: " + todayCount);
+                          views.setTextViewText(R.id.widget_status_icon, statusIcon != null ? statusIcon : "☀️");
+                          views.setTextViewText(R.id.widget_status_title, statusTitle != null ? statusTitle : "Salah Open");
+                          views.setTextViewText(R.id.widget_hijri_text, hijriText != null ? hijriText : "");
+                          views.setTextViewText(R.id.widget_gregorian_text, gregorianText != null ? gregorianText : "");
+
+                          if ("RED".equals(pillState)) {
+                              views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_red);
+                          } else if ("GREEN".equals(pillState)) {
+                              views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_green);
+                          } else {
+                              views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_default);
+                          }
+
+                          Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+                          if (launchIntent != null) {
+                              PendingIntent pendingIntent = PendingIntent.getActivity(
+                                  context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                              );
+                              views.setOnClickPendingIntent(R.id.widget_root, pendingIntent);
+                          }
+
+                          appWidgetManager.updateAppWidget(appWidgetId, views);
+                      } catch (Exception ignored) {}
                   }
               }
           }
           EOF
 
-          # ৫. AndroidManifest.xml-এ রিসিভার ইনজেকশন
+          # ৫. AndroidManifest.xml-এ সম্পূর্ণ প্যাকেজ নাম সহ রিসিভার ইনজেকশন
           python3 -c "
           p = 'android/app/src/main/AndroidManifest.xml'
           with open(p, 'r') as f:
@@ -252,7 +270,7 @@ jobs:
 
           receiver = '''
                   <receiver
-                      android:name=\".GlanceWidgetProvider\"
+                      android:name=\"com.ahm.tasbih.GlanceWidgetProvider\"
                       android:exported=\"true\">
                       <intent-filter>
                           <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
@@ -262,7 +280,7 @@ jobs:
                           android:resource=\"@xml/glance_widget_info\" />
                   </receiver>
           '''
-          if 'GlanceWidgetProvider' not in c:
+          if 'com.ahm.tasbih.GlanceWidgetProvider' not in c:
               c = c.replace('</application>', receiver + '\n    </application>')
               with open(p, 'w') as f:
                   f.write(c)
