@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:home_widget/home_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -355,9 +354,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     WidgetsBinding.instance.addObserver(this);
     _loadAllData().then((_) {
       _checkTimeNoticePrompt();
-      Future.delayed(const Duration(milliseconds: 600), () {
-        _syncWidgetSafely();
-      });
     });
   }
 
@@ -374,7 +370,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       _saveAllData();
-      _syncWidgetSafely();
     }
   }
 
@@ -406,7 +401,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       } else {
         _dhikrList = [
           DhikrItem(title: "Subhanallah", arabic: "سُبْحَانَ ٱللَّٰهِ", meaning: "Glory be to Allah", target: 33),
-          DhikrItem(title: "Alhamdulillah", arabic: "ٱلْحَمْدُ لِلَّٰهِ", meaning: "Praise be to Allah", target: 33),
+          DhikrItem(title: "Alhamdulillah", arabic: "ٱلْحَمْدُ লِلَّٰهِ", meaning: "Praise be to Allah", target: 33),
           DhikrItem(title: "Allahu Akbar", arabic: "ٱللَّٰهُ أَكْبَرُ", meaning: "Allah is the Greatest", target: 34),
           DhikrItem(title: "Kalima Tayyibah", arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ", meaning: "There is no god but Allah, Muhammad is the Messenger of Allah", target: 100),
           DhikrItem(title: "Astaghfirullah", arabic: "أَسْتَغْفِرُ ٱللَّٰهَ", meaning: "I seek forgiveness from Allah", target: 100),
@@ -543,40 +538,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     } catch (_) {}
   }
 
-  Future<void> _syncWidgetSafely() async {
-    try {
-      final now = DateTime.now();
-      final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-      final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
-      final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-
-      final todayKey = _getTodayKey();
-      final todayTotal = _dailyHistory[todayKey] ?? 0;
-
-      await HomeWidget.saveWidgetData<int>('widget_today_count', todayTotal);
-      await HomeWidget.saveWidgetData<String>('widget_hijri_date', hijri['formatted']);
-      await HomeWidget.saveWidgetData<String>('widget_greg_date', "${_getDayName(now.weekday)}, ${now.day} ${_getMonthName(now.month)}");
-
-      await HomeWidget.saveWidgetData<String>('widget_status_icon', status['icon']);
-      await HomeWidget.saveWidgetData<String>('widget_status_title', status['title']);
-
-      await HomeWidget.updateWidget(
-        name: 'TasbihWidgetProvider',
-        androidName: 'com.ahm.tasbih.TasbihWidgetProvider',
-      );
-    } catch (_) {}
-  }
-
-  String _getDayName(int day) {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    return days[(day - 1) % 7];
-  }
-
-  String _getMonthName(int month) {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return months[(month - 1) % 12];
-  }
-
   void _onTapCounter() {
     if (_dhikrList.isEmpty) return;
 
@@ -605,7 +566,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     });
 
     _saveAllData();
-    _syncWidgetSafely();
   }
 
   void _resetCurrentCount() {
@@ -807,7 +767,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                   _currentCount = 0;
                 });
                 _saveAllData();
-                _syncWidgetSafely();
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Data restored successfully!')),
@@ -894,7 +853,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                           });
                           setSettingsState(() {});
                           _saveAllData();
-                          _syncWidgetSafely();
                           Navigator.pop(ctx);
                         },
                         leading: Icon(
@@ -1219,7 +1177,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidgetSafely();
                                     }
                                   },
                                 ),
@@ -1252,7 +1209,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidgetSafely();
                                     }
                                   },
                                 ),
@@ -1325,7 +1281,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             setState(() => _hijriOffset = offset);
                             setSettingsState(() {});
                             _saveAllData();
-                            _syncWidgetSafely();
                           },
                         );
                       }).toList(),
