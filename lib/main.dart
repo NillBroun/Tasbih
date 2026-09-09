@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:home_widget/home_widget.dart';
 
 void main() {
@@ -53,6 +54,7 @@ class CountryPreset {
 }
 
 class SolarCalculator {
+  // Global Country Database in pure English
   static const List<CountryPreset> worldCountries = [
     CountryPreset("Afghanistan", 34.5553, 69.2075),
     CountryPreset("Albania", 41.3275, 19.8187),
@@ -153,6 +155,7 @@ class SolarCalculator {
     cosFajr = cosFajr.clamp(-1.0, 1.0);
     double fajrMin = acos(cosFajr) * 180.0 / pi * 4.0;
 
+    // Apply manual local offset across all astronomical nodes
     int sunrise = (solarNoonMin - haMin).round() + offsetMin;
     int sunset = (solarNoonMin + haMin).round() + offsetMin;
     int noon = solarNoonMin.round() + offsetMin;
@@ -188,28 +191,70 @@ class SolarCalculator {
     int sunset = times['sunset']!;
     int iftar = times['iftar']!;
 
+    // Forbidden prayer periods (Red badge)
     if (cur >= sunrise && cur < sunrise + 18) {
-      return {'statusType': 2, 'icon': '⛔', 'title': 'Sunrise (No Salah)', 'isForbidden': true};
+      return {
+        'statusType': 2,
+        'icon': '⛔',
+        'title': 'Sunrise (No Salah)',
+        'isForbidden': true,
+      };
     }
     if (cur >= noon - 12 && cur < noon) {
-      return {'statusType': 2, 'icon': '⛔', 'title': 'Zawwal (No Salah)', 'isForbidden': true};
+      return {
+        'statusType': 2,
+        'icon': '⛔',
+        'title': 'Zawwal (No Salah)',
+        'isForbidden': true,
+      };
     }
     if (cur >= sunset - 15 && cur < sunset) {
-      return {'statusType': 2, 'icon': '⛔', 'title': 'Sunset (No Salah)', 'isForbidden': true};
+      return {
+        'statusType': 2,
+        'icon': '⛔',
+        'title': 'Sunset (No Salah)',
+        'isForbidden': true,
+      };
     }
+
+    // Iftar time (Green badge)
     if (cur >= iftar && cur < iftar + 35) {
-      return {'statusType': 1, 'icon': '🍽️', 'title': 'Iftar Now (${formatMin(iftar)})', 'isForbidden': false};
+      return {
+        'statusType': 1,
+        'icon': '🍽️',
+        'title': 'Iftar Now (${formatMin(iftar)})',
+        'isForbidden': false,
+      };
     }
+
+    // Sehri 60-minute countdown (Green badge)
     if (cur >= sehriEnd - 60 && cur <= sehriEnd) {
       int left = sehriEnd - cur;
-      return {'statusType': 1, 'icon': '🥣', 'title': left <= 20 ? 'Sehri: ${left}m left' : 'Sehri Ends ${formatMin(sehriEnd)}', 'isForbidden': false};
+      return {
+        'statusType': 1,
+        'icon': '🥣',
+        'title': left <= 20 ? 'Sehri: ${left}m left' : 'Sehri Ends ${formatMin(sehriEnd)}',
+        'isForbidden': false,
+      };
     }
+
+    // Afternoon status until Sunset
     if (cur >= noon + 240 && cur < sunset - 15) {
-      return {'statusType': 0, 'icon': '🌇', 'title': 'Iftar: ${formatMin(iftar)}', 'isForbidden': false};
+      return {
+        'statusType': 0,
+        'icon': '🌇',
+        'title': 'Iftar: ${formatMin(iftar)}',
+        'isForbidden': false,
+      };
     }
 
     bool isNight = cur < sunrise || cur >= sunset;
-    return {'statusType': 0, 'icon': isNight ? '🌙' : '☀️', 'title': 'Salah Open', 'isForbidden': false};
+    return {
+      'statusType': 0,
+      'icon': isNight ? '🌙' : '☀️',
+      'title': 'Salah Open',
+      'isForbidden': false,
+    };
   }
 }
 
@@ -292,17 +337,21 @@ class TasbihHomeScreen extends StatefulWidget {
 }
 
 class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBindingObserver {
+  AudioPlayer? _audioPlayer;
+
   List<DhikrItem> _dhikrList = [];
   int _currentIndex = 0;
   int _currentCount = 0;
 
+  bool _isSoundOn = true;
+  bool _isVibrateOn = true;
   double _fontScale = 1.0;
   int _hijriOffset = 0;
 
   String _countryName = "Bangladesh";
   double _userLat = 23.8103;
   double _userLng = 90.4125;
-  int _districtOffsetMin = 0;
+  int _districtOffsetMin = 0; // ±30 mins manual offset
 
   Map<String, int> _dailyHistory = {};
 
@@ -310,14 +359,23 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadAllData().then((_) {
-      _checkTimeNoticePrompt();
-    });
+    _initAudioSafe();
+    _loadAllData();
+  }
+
+  void _initAudioSafe() {
+    try {
+      _audioPlayer = AudioPlayer();
+      _audioPlayer?.setPlayerMode(PlayerMode.lowLatency);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    try {
+      _audioPlayer?.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -337,6 +395,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   Future<void> _loadAllData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _isSoundOn = prefs.getBool('isSoundOn') ?? true;
+      _isVibrateOn = prefs.getBool('isVibrateOn') ?? true;
       _fontScale = prefs.getDouble('fontScale') ?? 1.0;
       _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
 
@@ -375,107 +435,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     } catch (_) {}
   }
 
-  Future<void> _checkTimeNoticePrompt() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bool hidePrompt = prefs.getBool('hide_time_notice_prompt') ?? false;
-      if (!hidePrompt && mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showInitialTimeNoticeDialog();
-        });
-      }
-    } catch (_) {}
-  }
-
-  void _showInitialTimeNoticeDialog() {
-    bool doNotShowAgain = false;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          backgroundColor: const Color(0xFF222428),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Row(
-            children: [
-              Icon(Icons.access_time_filled, color: Color(0xFF00B074)),
-              SizedBox(width: 10),
-              Text(
-                'Set Your Local Time',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Prayer and Iftar times are calculated offline based on your country\'s capital. If your local mosque differs by a few minutes, adjust the offset in Settings.',
-                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () {
-                  setDlgState(() {
-                    doNotShowAgain = !doNotShowAgain;
-                  });
-                },
-                child: Row(
-                  children: [
-                    Checkbox(
-                      value: doNotShowAgain,
-                      activeColor: const Color(0xFF00B074),
-                      checkColor: Colors.white,
-                      onChanged: (val) {
-                        setDlgState(() {
-                          doNotShowAgain = val ?? false;
-                        });
-                      },
-                    ),
-                    const Text(
-                      'Don\'t show again',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                if (doNotShowAgain) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('hide_time_notice_prompt', true);
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('Later', style: TextStyle(color: Colors.white60)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00B074),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('hide_time_notice_prompt', true);
-                Navigator.pop(ctx);
-                _openSettingsModal();
-              },
-              child: const Text('Adjust Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _saveAllData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isSoundOn', _isSoundOn);
+      await prefs.setBool('isVibrateOn', _isVibrateOn);
       await prefs.setDouble('fontScale', _fontScale);
       await prefs.setInt('hijriOffset', _hijriOffset);
 
@@ -491,6 +455,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     } catch (_) {}
   }
 
+  // Instant widget sync using accurate offset calculations
   Future<void> _syncWidget() async {
     try {
       final now = DateTime.now();
@@ -529,6 +494,17 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   void _onTapCounter() {
     if (_dhikrList.isEmpty) return;
 
+    if (_isSoundOn && _audioPlayer != null) {
+      try {
+        _audioPlayer!.stop();
+        _audioPlayer!.play(AssetSource('audio/click.wav'));
+      } catch (_) {}
+    }
+
+    if (_isVibrateOn) {
+      HapticFeedback.lightImpact();
+    }
+
     setState(() {
       _currentCount++;
       _dhikrList[_currentIndex].lifetimeCount++;
@@ -536,10 +512,9 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       final today = _getTodayKey();
       _dailyHistory[today] = (_dailyHistory[today] ?? 0) + 1;
 
-      // টার্গেট পূর্ণ হলে শুধুমাত্র ভারী ভাইব্রেশন
       final target = _dhikrList[_currentIndex].target;
       if (target > 0 && _currentCount == target) {
-        HapticFeedback.heavyImpact();
+        if (_isVibrateOn) HapticFeedback.heavyImpact();
       }
     });
 
@@ -552,7 +527,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _currentCount = 0;
     });
     _saveAllData();
-    _syncWidget();
   }
 
   void _resetLifetimeCount() {
@@ -578,7 +552,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 _dhikrList[_currentIndex].lifetimeCount = 0;
               });
               _saveAllData();
-              _syncWidget();
               Navigator.pop(ctx);
             },
             child: const Text('Reset', style: TextStyle(color: Colors.white)),
@@ -800,7 +773,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     autofocus: false,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Search country...',
+                      hintText: 'Search country (e.g., India, Pakistan, Saudi Arabia)...',
                       hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                       prefixIcon: const Icon(Icons.search, color: Color(0xFF00B074)),
                       filled: true,
@@ -831,12 +804,15 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             _countryName = country.name;
                             _userLat = country.lat;
                             _userLng = country.lng;
-                            _districtOffsetMin = 0;
+                            _districtOffsetMin = 0; // Reset offset on new country
                           });
                           setSettingsState(() {});
                           _saveAllData();
                           _syncWidget();
                           Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Country set to: ${country.name}')),
+                          );
                         },
                         leading: Icon(
                           Icons.public,
@@ -927,7 +903,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             _currentCount = 0;
                           });
                           _saveAllData();
-                          _syncWidget();
                           Navigator.pop(ctx);
                         },
                         title: Text(
@@ -996,7 +971,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               });
               setModalState(() {});
               _saveAllData();
-              _syncWidget();
               Navigator.pop(ctx);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -1037,14 +1011,14 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               TextField(
                 controller: meaningCtrl,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Meaning', labelStyle: TextStyle(color: Colors.white60)),
+                decoration: const InputDecoration(labelText: 'Meaning (Translation)', labelStyle: TextStyle(color: Colors.white60)),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: targetCtrl,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Target Count', labelStyle: TextStyle(color: Colors.white60)),
+                decoration: const InputDecoration(labelText: 'Target Count (e.g., 33, 100, 0 for ∞)', labelStyle: TextStyle(color: Colors.white60)),
               ),
             ],
           ),
@@ -1076,7 +1050,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               });
               setModalState(() {});
               _saveAllData();
-              _syncWidget();
               Navigator.pop(ctx);
             },
             child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -1123,6 +1096,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    // 1. Country Selection
                     ListTile(
                       leading: const Icon(Icons.public, color: Color(0xFF00B074)),
                       title: const Text('Country / Region', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1132,6 +1106,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                     ),
                     const Divider(color: Colors.white12),
 
+                    // 2. District / Local Time Offset (+/- 30 mins) with instant auto-sync to Widget
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Column(
@@ -1163,7 +1138,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _syncWidget(); // Instantly update widget calculations
                                     }
                                   },
                                 ),
@@ -1196,7 +1171,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _syncWidget(); // Instantly update widget calculations
                                     }
                                   },
                                 ),
@@ -1205,6 +1180,30 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                           ),
                         ],
                       ),
+                    ),
+                    const Divider(color: Colors.white12),
+
+                    SwitchListTile(
+                      activeColor: const Color(0xFF00B074),
+                      title: const Text('Sound Feedback', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Play click sound on each count', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      value: _isSoundOn,
+                      onChanged: (val) {
+                        setState(() => _isSoundOn = val);
+                        setSettingsState(() {});
+                        _saveAllData();
+                      },
+                    ),
+                    SwitchListTile(
+                      activeColor: const Color(0xFF00B074),
+                      title: const Text('Vibration Feedback', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Light haptic impact on tap', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      value: _isVibrateOn,
+                      onChanged: (val) {
+                        setState(() => _isVibrateOn = val);
+                        setSettingsState(() {});
+                        _saveAllData();
+                      },
                     ),
                     const Divider(color: Colors.white12),
 
@@ -1366,7 +1365,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
               ),
               const Divider(color: Colors.white12, height: 24),
-              const Text('Developer: AHM', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+              const Text('Developer: AHM[span_0](start_span)[span_0](end_span)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
               const SizedBox(height: 12),
               InkWell(
                 onTap: () async {
@@ -1402,7 +1401,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF00B074)),
+            child: const Text('Close', style: TextStyle(color: Color(0xFF00B074))),
           ),
         ],
       ),
@@ -1640,7 +1639,17 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                         ),
                       ),
                     ),
-                    const SizedBox(width: 26),
+                    IconButton(
+                      icon: Icon(
+                        _isSoundOn ? Icons.volume_up : Icons.volume_off,
+                        color: _isSoundOn ? const Color(0xFF00B074) : Colors.white38,
+                        size: 26,
+                      ),
+                      onPressed: () {
+                        setState(() => _isSoundOn = !_isSoundOn);
+                        _saveAllData();
+                      },
+                    ),
                   ],
                 ),
               ),
