@@ -41,11 +41,10 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
 
-          # ১. ড্রয়েবল ব্যাকগ্রাউন্ড শেপ (উইজেটের মূল পিল)
+          # ১. ড্রয়েবল ব্যাকগ্রাউন্ড শেপসমূহ
           cat << 'EOF' > android/app/src/main/res/drawable/widget_pill_background.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"
-              android:shape="rectangle">
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#1A1C1E" />
               <corners android:radius="24dp" />
           </shape>
@@ -53,8 +52,7 @@ jobs:
 
           cat << 'EOF' > android/app/src/main/res/drawable/status_pill_default.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"
-              android:shape="rectangle">
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#333333" />
               <corners android:radius="14dp" />
           </shape>
@@ -155,7 +153,7 @@ jobs:
           </LinearLayout>
           EOF
 
-          # ৩. উইজেট ইনফো কনফিগারেশন XML
+          # ৩. উইজেট ইনফো XML
           cat << 'EOF' > android/app/src/main/res/xml/glance_widget_info.xml
           <?xml version="1.0" encoding="utf-8"?>
           <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
@@ -167,7 +165,7 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # ৪. GlanceWidgetProvider Kotlin ক্লাস (১০০% ক্র্যাশ-গার্ড ও নিরাপদ কাস্টিং সহ)
+          # ৪. GlanceWidgetProvider (home_widget এবং Flutter SharedPreferences সুরক্ষিত রিডার)
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/GlanceWidgetProvider.kt
           package com.ahm.tasbih
 
@@ -175,6 +173,7 @@ jobs:
           import android.appwidget.AppWidgetManager
           import android.appwidget.AppWidgetProvider
           import android.content.Context
+          import android.content.Intent
           import android.content.SharedPreferences
           import android.graphics.Color
           import android.widget.RemoteViews
@@ -193,18 +192,12 @@ jobs:
                           try {
                               val views = RemoteViews(context.packageName, R.layout.glance_widget_layout)
 
-                              // নিরাপদভাবে সংখ্যা রিড করা (Long বা Int উভয়ের জন্যই নিরাপদ)
-                              var todayCount = 0L
-                              val countRaw = widgetData.all["flutter.today_count"]
-                              if (countRaw is Number) {
-                                  todayCount = countRaw.toLong()
-                              }
-
-                              val statusIcon = widgetData.getString("flutter.status_icon", "☀️") ?: "☀️"
-                              val statusTitle = widgetData.getString("flutter.status_title", "Salah Open") ?: "Salah Open"
-                              val hijriText = widgetData.getString("flutter.hijri_date", "") ?: ""
-                              val gregorianText = widgetData.getString("flutter.gregorian_date", "") ?: ""
-                              val pillState = widgetData.getString("flutter.status_pill_state", "DEFAULT") ?: "DEFAULT"
+                              val todayCount = widgetData.getString("flutter.w_count", "0") ?: "0"
+                              val statusIcon = widgetData.getString("flutter.w_icon", "☀️") ?: "☀️"
+                              val statusTitle = widgetData.getString("flutter.w_title", "Salah Open") ?: "Salah Open"
+                              val hijriText = widgetData.getString("flutter.w_hijri", "") ?: ""
+                              val gregorianText = widgetData.getString("flutter.w_greg", "") ?: ""
+                              val pillState = widgetData.getString("flutter.w_pill", "DEFAULT") ?: "DEFAULT"
 
                               views.setTextViewText(R.id.widget_tasbih_text, "Today: $todayCount")
                               views.setTextViewText(R.id.widget_status_icon, statusIcon)
@@ -212,7 +205,6 @@ jobs:
                               views.setTextViewText(R.id.widget_hijri_text, hijriText)
                               views.setTextViewText(R.id.widget_gregorian_text, gregorianText)
 
-                              // RemoteViews-এর জন্য অনুমোদিত setInt(setBackgroundColor)
                               when (pillState) {
                                   "RED" -> views.setInt(R.id.status_pill_container, "setBackgroundColor", Color.parseColor("#D32F2F"))
                                   "GREEN" -> views.setInt(R.id.status_pill_container, "setBackgroundColor", Color.parseColor("#00B074"))
@@ -238,7 +230,7 @@ jobs:
           }
           EOF
 
-          # ৫. AndroidManifest.xml-এ পূর্ণ প্যাকেজ নাম সহ রিসিভার ইনজেকশন
+          # ৫. AndroidManifest.xml-এ রিসিভার ইনজেকশন
           python3 -c "
           p = 'android/app/src/main/AndroidManifest.xml'
           with open(p, 'r') as f:
