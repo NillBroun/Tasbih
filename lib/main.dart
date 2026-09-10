@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart' as intl;
 
 void main() async {
@@ -53,38 +52,6 @@ class CountryPreset {
   final double lng;
 
   const CountryPreset(this.name, this.lat, this.lng);
-}
-
-class WidgetUpdater {
-  static Future<void> updateGlanceWidget({
-    required int todayCount,
-    required Map<String, dynamic> status,
-    required String hijriText,
-  }) async {
-    try {
-      String pillState = "DEFAULT";
-      if (status['isForbidden'] == true || status['statusType'] == 2) {
-        pillState = "RED";
-      } else if (status['isIftar'] == true) {
-        pillState = "GREEN";
-      }
-
-      final now = DateTime.now();
-      final gregorian = intl.DateFormat('EEE, d MMM').format(now);
-
-      await HomeWidget.saveWidgetData<int>('today_count', todayCount);
-      await HomeWidget.saveWidgetData<String>('status_icon', status['icon'] ?? '☀️');
-      await HomeWidget.saveWidgetData<String>('status_title', status['title'] ?? 'Salah Open');
-      await HomeWidget.saveWidgetData<String>('status_pill_state', pillState);
-      await HomeWidget.saveWidgetData<String>('hijri_date', hijriText);
-      await HomeWidget.saveWidgetData<String>('gregorian_date', gregorian);
-
-      await HomeWidget.updateWidget(
-        name: 'GlanceWidgetProvider',
-        androidName: 'GlanceWidgetProvider',
-      );
-    } catch (_) {}
-  }
 }
 
 class SolarCalculator {
@@ -393,8 +360,10 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     _loadAllData().then((_) {
       if (!mounted) return;
       _checkTimeNoticePrompt();
-      _syncWidget();
-      _startWidgetTimer();
+      _pushWidgetData();
+      _widgetTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (mounted) _pushWidgetData();
+      });
     });
   }
 
@@ -405,34 +374,40 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     super.dispose();
   }
 
-  void _startWidgetTimer() {
-    _widgetTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) _syncWidget();
-    });
-  }
+  void _pushWidgetData() async {
+    try {
+      final now = DateTime.now();
+      final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
+      final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
+      final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
 
-  void _syncWidget() {
-    final now = DateTime.now();
-    final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-    final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
-    final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
+      final todayKey = _getTodayKey();
+      final todayCount = _dailyHistory[todayKey] ?? 0;
+      final hijriFormatted = "${hijri['day']} ${hijri['month']}";
+      final gregorian = intl.DateFormat('EEE, d MMM').format(now);
 
-    final todayKey = _getTodayKey();
-    final todayCount = _dailyHistory[todayKey] ?? 0;
-    final hijriFormatted = "${hijri['day']} ${hijri['month']}";
+      String pillState = "DEFAULT";
+      if (status['statusType'] == 2) {
+        pillState = "RED";
+      } else if (status['isIftar'] == true) {
+        pillState = "GREEN";
+      }
 
-    WidgetUpdater.updateGlanceWidget(
-      todayCount: todayCount,
-      status: status,
-      hijriText: hijriFormatted,
-    );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('w_count', "$todayCount");
+      await prefs.setString('w_icon', status['icon'] ?? '☀️');
+      await prefs.setString('w_title', status['title'] ?? 'Salah Open');
+      await prefs.setString('w_hijri', hijriFormatted);
+      await prefs.setString('w_greg', gregorian);
+      await prefs.setString('w_pill', pillState);
+    } catch (_) {}
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       _saveAllData();
-      _syncWidget();
+      _pushWidgetData();
     }
   }
 
@@ -609,7 +584,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     });
 
     _saveAllData();
-    _syncWidget();
+    _pushWidgetData();
   }
 
   void _resetCurrentCount() {
@@ -617,7 +592,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _currentCount = 0;
     });
     _saveAllData();
-    _syncWidget();
+    _pushWidgetData();
   }
 
   void _resetLifetimeCount() {
@@ -643,7 +618,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 _dhikrList[_currentIndex].lifetimeCount = 0;
               });
               _saveAllData();
-              _syncWidget();
+              _pushWidgetData();
               Navigator.pop(ctx);
             },
             child: const Text('Reset', style: TextStyle(color: Colors.white)),
@@ -815,7 +790,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                   _currentCount = 0;
                 });
                 _saveAllData();
-                _syncWidget();
+                _pushWidgetData();
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Data restored successfully!')),
@@ -902,7 +877,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                           });
                           setSettingsState(() {});
                           _saveAllData();
-                          _syncWidget();
+                          _pushWidgetData();
                           Navigator.pop(ctx);
                         },
                         leading: Icon(
@@ -994,6 +969,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             _currentCount = 0;
                           });
                           _saveAllData();
+                          _pushWidgetData();
                           Navigator.pop(ctx);
                         },
                         title: Text(
@@ -1062,6 +1038,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               });
               setModalState(() {});
               _saveAllData();
+              _pushWidgetData();
               Navigator.pop(ctx);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -1141,6 +1118,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               });
               setModalState(() {});
               _saveAllData();
+              _pushWidgetData();
               Navigator.pop(ctx);
             },
             child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -1227,7 +1205,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _pushWidgetData();
                                     }
                                   },
                                 ),
@@ -1260,7 +1238,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _syncWidget();
+                                      _pushWidgetData();
                                     }
                                   },
                                 ),
@@ -1309,7 +1287,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             setState(() => _hijriOffset = offset);
                             setSettingsState(() {});
                             _saveAllData();
-                            _syncWidget();
+                            _pushWidgetData();
                           },
                         );
                       }).toList(),
