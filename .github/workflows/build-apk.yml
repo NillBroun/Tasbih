@@ -39,13 +39,12 @@ jobs:
           mkdir -p android/app/src/main/res/layout
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/xml
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
+          mkdir -p android/app/src/main/java/com/ahm/tasbih
 
-          # ১. ড্রয়েবল ব্যাকগ্রাউন্ড শেপসমূহ (RemoteViews Safe Color Codes)
+          # ১. ড্রয়েবল ব্যাকগ্রাউন্ড শেপসমূহ (সিস্টেম-সেফ সলিড কালার)
           cat << 'EOF' > android/app/src/main/res/drawable/widget_pill_background.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"
-              android:shape="rectangle">
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#1A1C1E" />
               <corners android:radius="24dp" />
           </shape>
@@ -53,8 +52,7 @@ jobs:
 
           cat << 'EOF' > android/app/src/main/res/drawable/status_pill_default.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"
-              android:shape="rectangle">
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#333333" />
               <corners android:radius="14dp" />
           </shape>
@@ -62,8 +60,7 @@ jobs:
 
           cat << 'EOF' > android/app/src/main/res/drawable/status_pill_red.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"
-              android:shape="rectangle">
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#D32F2F" />
               <corners android:radius="14dp" />
           </shape>
@@ -71,8 +68,7 @@ jobs:
 
           cat << 'EOF' > android/app/src/main/res/drawable/status_pill_green.xml
           <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android"
-              android:shape="rectangle">
+          <shape xmlns:android="http://schemas.android.com/apk/res/android">
               <solid android:color="#00B074" />
               <corners android:radius="14dp" />
           </shape>
@@ -185,14 +181,13 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # ৪. GlanceWidgetProvider (Kotlin ফোল্ডারে জাভা ক্লাস, কোনো কনফ্লিক্ট ছাড়া)
-          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/GlanceWidgetProvider.java
+          # ৪. GlanceWidgetProvider (সম্পূর্ণ স্বাধীন ও ক্র্যাশ-প্রুফ ক্লাস)
+          cat << 'EOF' > android/app/src/main/java/com/ahm/tasbih/GlanceWidgetProvider.java
           package com.ahm.tasbih;
 
           import android.app.PendingIntent;
           import android.appwidget.AppWidgetManager;
           import android.appwidget.AppWidgetProvider;
-          import android.content.ComponentName;
           import android.content.Context;
           import android.content.Intent;
           import android.content.SharedPreferences;
@@ -200,72 +195,50 @@ jobs:
 
           public class GlanceWidgetProvider extends AppWidgetProvider {
               @Override
-              public void onReceive(Context context, Intent intent) {
-                  try {
-                      super.onReceive(context, intent);
-                      AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-                      ComponentName thisWidget = new ComponentName(context, GlanceWidgetProvider.class);
-                      int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
-                      if (appWidgetIds != null && appWidgetIds.length > 0) {
-                          onUpdate(context, appWidgetManager, appWidgetIds);
-                      }
-                  } catch (Throwable ignored) {}
-              }
-
-              @Override
               public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
                   try {
                       SharedPreferences prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE);
 
                       for (int appWidgetId : appWidgetIds) {
-                          try {
-                              RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.glance_widget_layout);
+                          RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.glance_widget_layout);
 
-                              long todayCount = 0L;
-                              try {
-                                  Object countObj = prefs.getAll().get("flutter.widget_today_count");
-                                  if (countObj instanceof Number) {
-                                      todayCount = ((Number) countObj).longValue();
-                                  }
-                              } catch (Throwable ignored) {}
+                          String todayCount = prefs.getString("flutter.w_count", "0");
+                          String statusIcon = prefs.getString("flutter.w_icon", "☀️");
+                          String statusTitle = prefs.getString("flutter.w_title", "Salah Open");
+                          String hijriText = prefs.getString("flutter.w_hijri", "");
+                          String gregorianText = prefs.getString("flutter.w_greg", "");
+                          String pillState = prefs.getString("flutter.w_pill", "DEFAULT");
 
-                              String statusIcon = prefs.getString("flutter.widget_status_icon", "☀️");
-                              String statusTitle = prefs.getString("flutter.widget_status_title", "Salah Open");
-                              String hijriText = prefs.getString("flutter.widget_hijri_date", "");
-                              String gregorianText = prefs.getString("flutter.widget_gregorian_date", "");
-                              String pillState = prefs.getString("flutter.widget_status_pill_state", "DEFAULT");
+                          views.setTextViewText(R.id.widget_tasbih_text, "Today: " + todayCount);
+                          views.setTextViewText(R.id.widget_status_icon, statusIcon != null ? statusIcon : "☀️");
+                          views.setTextViewText(R.id.widget_status_title, statusTitle != null ? statusTitle : "Salah Open");
+                          views.setTextViewText(R.id.widget_hijri_text, hijriText != null ? hijriText : "");
+                          views.setTextViewText(R.id.widget_gregorian_text, gregorianText != null ? gregorianText : "");
 
-                              views.setTextViewText(R.id.widget_tasbih_text, "Today: " + todayCount);
-                              views.setTextViewText(R.id.widget_status_icon, statusIcon != null ? statusIcon : "☀️");
-                              views.setTextViewText(R.id.widget_status_title, statusTitle != null ? statusTitle : "Salah Open");
-                              views.setTextViewText(R.id.widget_hijri_text, hijriText != null ? hijriText : "");
-                              views.setTextViewText(R.id.widget_gregorian_text, gregorianText != null ? gregorianText : "");
+                          if ("RED".equals(pillState)) {
+                              views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_red);
+                          } else if ("GREEN".equals(pillState)) {
+                              views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_green);
+                          } else {
+                              views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_default);
+                          }
 
-                              if ("RED".equals(pillState)) {
-                                  views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_red);
-                              } else if ("GREEN".equals(pillState)) {
-                                  views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_green);
-                              } else {
-                                  views.setInt(R.id.status_pill_container, "setBackgroundResource", R.drawable.status_pill_default);
-                              }
+                          Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+                          if (launchIntent != null) {
+                              PendingIntent pendingIntent = PendingIntent.getActivity(
+                                  context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                              );
+                              views.setOnClickPendingIntent(R.id.widget_root, pendingIntent);
+                          }
 
-                              Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-                              if (launchIntent != null) {
-                                  PendingIntent pendingIntent = PendingIntent.getActivity(
-                                      context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-                                  );
-                                  views.setOnClickPendingIntent(R.id.widget_root, pendingIntent);
-                              }
-
-                              appWidgetManager.updateAppWidget(appWidgetId, views);
-                          } catch (Throwable ignored) {}
+                          appWidgetManager.updateAppWidget(appWidgetId, views);
                       }
-                  } catch (Throwable ignored) {}
+                  } catch (Exception ignored) {}
               }
           }
           EOF
 
-          # ৫. AndroidManifest.xml-এ নিখুঁত প্যাকেজ সহ রিসিভার ইনজেকশন
+          # ৫. AndroidManifest.xml-এ রিসিভার ইনজেকশন
           python3 -c "
           p = 'android/app/src/main/AndroidManifest.xml'
           with open(p, 'r') as f:
