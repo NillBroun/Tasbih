@@ -1,17 +1,164 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart' as intl;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const TasbihApp());
+}
+
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  Future<void> init() async {
+    tz.initializeTimeZones();
+
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const InitializationSettings initSettings =
+        InitializationSettings(android: androidSettings);
+
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
+
+    final androidImplementation = flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidImplementation?.requestNotificationsPermission();
+    await androidImplementation?.requestExactAlarmsPermission();
+  }
+
+  Future<void> _scheduleAt(int id, String title, String body, DateTime scheduledTime, {bool isAlert = false}) async {
+    final now = DateTime.now();
+    if (scheduledTime.isBefore(now)) return;
+
+    final tzDateTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
+    final androidDetails = AndroidNotificationDetails(
+      isAlert ? 'prayer_alerts_critical' : 'prayer_alerts_general',
+      isAlert ? 'Urgent Alerts' : 'Daily Islamic Reminders',
+      channelDescription: 'Prayer, Forbidden times, Sehri and Iftar notifications',
+      importance: isAlert ? Importance.max : Importance.high,
+      priority: isAlert ? Priority.high : Priority.defaultPriority,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tzDateTime,
+      NotificationDetails(android: androidDetails),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  DateTime _minToDate(DateTime base, int totalMin) {
+    int h = (totalMin % 1440) ~/ 60;
+    int m = (totalMin % 1440) % 60;
+    return DateTime(base.year, base.month, base.day, h, m);
+  }
+
+  Future<void> cancelById(int id) async {
+    await flutterLocalNotificationsPlugin.cancel(id);
+  }
+
+  Future<void> scheduleDailyTimers({
+    required Map<String, int> times,
+    required bool enableSehriStart,
+    required bool enableSehriAlert,
+    required bool enableIftar,
+    required bool enableForbidden,
+    int sehriAlertMinutesBefore = 20,
+  }) async {
+    final now = DateTime.now();
+
+    int sehriEndMin = times['sehriEnd']!;
+    int sunriseMin = times['sunrise']!;
+    int noonMin = times['noon']!;
+    int sunsetMin = times['sunset']!;
+    int iftarMin = times['iftar']!;
+
+    // ১. সেহরি শুরু
+    if (enableSehriStart) {
+      await _scheduleAt(
+        101,
+        '🥣 সেহরির সময় শুরু',
+        'বরকতময় সেহরির সময় শুরু হয়েছে। সুন্নাত অনুযায়ী সেহরি গ্রহণ করুন।',
+        _minToDate(now, sehriEndMin - 75),
+      );
+    } else {
+      await cancelById(101);
+    }
+
+    // ২. সেহরি শেষ সতর্কবার্তা
+    if (enableSehriAlert) {
+      await _scheduleAt(
+        102,
+        '⚠️ সেহরি শেষ সতর্কবার্তা!',
+        'সেহরির সময় শেষ হতে আর মাত্র $sehriAlertMinutesBefore মিনিট বাকি!',
+        _minToDate(now, sehriEndMin - sehriAlertMinutesBefore),
+        isAlert: true,
+      );
+    } else {
+      await cancelById(102);
+    }
+
+    // ৩. ইফতার
+    if (enableIftar) {
+      await _scheduleAt(
+        103,
+        '🍽️ ইফতারের সময় হয়েছে',
+        'সূর্যাস্ত হয়েছে। দুআ পাঠ করে ইফতার সম্পন্ন করুন।',
+        _minToDate(now, iftarMin),
+        isAlert: true,
+      );
+    } else {
+      await cancelById(103);
+    }
+
+    // ৪. নিষিদ্ধ সময়সমূহ
+    if (enableForbidden) {
+      await _scheduleAt(
+        104,
+        '⛔ নামাজের নিষিদ্ধ সময় (সূর্যোদয়)',
+        'সূর্যোদয়ের নিষিদ্ধ সময় শুরু হয়েছে। ১৮ মিনিট সালাত বন্ধ রাখুন।',
+        _minToDate(now, sunriseMin),
+      );
+      await _scheduleAt(
+        105,
+        '⛔ নামাজের নিষিদ্ধ সময় (জাওয়াল)',
+        'সূর্য মাথার ঠিক উপরে অবস্থান করছে। যোহর পর্যন্ত সালাত বন্ধ রাখুন।',
+        _minToDate(now, noonMin - 12),
+      );
+      await _scheduleAt(
+        106,
+        '⛔ নামাজের নিষিদ্ধ সময় (সূর্যাস্ত)',
+        'সূর্যাস্তের নিষিদ্ধ সময় শুরু হয়েছে। মাগরিব পর্যন্ত নফল সালাত বন্ধ রাখুন।',
+        _minToDate(now, sunsetMin - 15),
+      );
+    } else {
+      await cancelById(104);
+      await cancelById(105);
+      await cancelById(106);
+    }
+  }
 }
 
 class DhikrItem {
@@ -196,7 +343,6 @@ class SolarCalculator {
         'icon': '⛔',
         'title': 'Sunrise (No Salah)',
         'isForbidden': true,
-        'isIftar': false,
       };
     }
     if (cur >= noon - 12 && cur < noon) {
@@ -205,7 +351,6 @@ class SolarCalculator {
         'icon': '⛔',
         'title': 'Zawwal (No Salah)',
         'isForbidden': true,
-        'isIftar': false,
       };
     }
     if (cur >= sunset - 15 && cur < sunset) {
@@ -214,17 +359,15 @@ class SolarCalculator {
         'icon': '⛔',
         'title': 'Sunset (No Salah)',
         'isForbidden': true,
-        'isIftar': false,
       };
     }
 
     if (cur >= iftar && cur < iftar + 35) {
       return {
         'statusType': 1,
-        'icon': '🍱',
+        'icon': '🍽️',
         'title': 'Iftar Now (${formatMin(iftar)})',
         'isForbidden': false,
-        'isIftar': true,
       };
     }
 
@@ -232,10 +375,9 @@ class SolarCalculator {
       int left = sehriEnd - cur;
       return {
         'statusType': 1,
-        'icon': '🍱',
+        'icon': '🥣',
         'title': left <= 20 ? 'Sehri: ${left}m left' : 'Sehri Ends ${formatMin(sehriEnd)}',
         'isForbidden': false,
-        'isIftar': false,
       };
     }
 
@@ -245,7 +387,6 @@ class SolarCalculator {
         'icon': '🌇',
         'title': 'Iftar: ${formatMin(iftar)}',
         'isForbidden': false,
-        'isIftar': false,
       };
     }
 
@@ -255,7 +396,6 @@ class SolarCalculator {
       'icon': isNight ? '🌙' : '☀️',
       'title': 'Salah Open',
       'isForbidden': false,
-      'isIftar': false,
     };
   }
 }
@@ -278,11 +418,12 @@ class HijriCalculator {
     int year = adjusted.year;
 
     int m = month;
+    int y = year;
     if (m < 3) {
+      y -= 1;
       m += 12;
     }
 
-    int y = (adjusted.month < 3) ? adjusted.year - 1 : adjusted.year;
     int a = (y / 100).floor();
     int b = 2 - a + (a / 4).floor();
     int jd = (365.25 * (y + 4716)).floor() + (30.6001 * (m + 1)).floor() + day + b - 1524;
@@ -351,69 +492,57 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
   int _districtOffsetMin = 0;
 
   Map<String, int> _dailyHistory = {};
-  Timer? _widgetTimer;
+
+  // নোটিফিকেশন টগল অপশনসমূহ
+  bool _notifSehriStart = true;
+  bool _notifSehriAlert = true;
+  bool _notifIftar = true;
+  bool _notifForbidden = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadAllData().then((_) {
-      if (!mounted) return;
       _checkTimeNoticePrompt();
-      _pushWidgetData();
-      _widgetTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-        if (mounted) _pushWidgetData();
-      });
     });
   }
 
   @override
   void dispose() {
-    _widgetTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  void _pushWidgetData() async {
-    try {
-      final now = DateTime.now();
-      final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-      final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
-      final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-
-      final todayKey = _getTodayKey();
-      final todayCount = _dailyHistory[todayKey] ?? 0;
-      final hijriFormatted = "${hijri['day']} ${hijri['month']}";
-      final gregorian = intl.DateFormat('EEE, d MMM').format(now);
-
-      String pillState = "DEFAULT";
-      if (status['statusType'] == 2) {
-        pillState = "RED";
-      } else if (status['isIftar'] == true) {
-        pillState = "GREEN";
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('w_count', "$todayCount");
-      await prefs.setString('w_icon', status['icon'] ?? '☀️');
-      await prefs.setString('w_title', status['title'] ?? 'Salah Open');
-      await prefs.setString('w_hijri', hijriFormatted);
-      await prefs.setString('w_greg', gregorian);
-      await prefs.setString('w_pill', pillState);
-    } catch (_) {}
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       _saveAllData();
-      _pushWidgetData();
     }
   }
 
   String _getTodayKey() {
     final now = DateTime.now();
     return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+  }
+
+  Future<void> _updateNotifications() async {
+    final now = DateTime.now();
+    final times = SolarCalculator.getTimes(
+      now,
+      lat: _userLat,
+      lng: _userLng,
+      offsetMin: _districtOffsetMin,
+    );
+
+    await NotificationService().scheduleDailyTimers(
+      times: times,
+      enableSehriStart: _notifSehriStart,
+      enableSehriAlert: _notifSehriAlert,
+      enableIftar: _notifIftar,
+      enableForbidden: _notifForbidden,
+      sehriAlertMinutesBefore: 20,
+    );
   }
 
   Future<void> _loadAllData() async {
@@ -429,6 +558,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
 
       _currentIndex = prefs.getInt('currentIndex') ?? 0;
       _currentCount = prefs.getInt('currentCount') ?? 0;
+
+      _notifSehriStart = prefs.getBool('notifSehriStart') ?? true;
+      _notifSehriAlert = prefs.getBool('notifSehriAlert') ?? true;
+      _notifIftar = prefs.getBool('notifIftar') ?? true;
+      _notifForbidden = prefs.getBool('notifForbidden') ?? true;
 
       final dhikrString = prefs.getString('dhikrList');
       if (dhikrString != null) {
@@ -451,6 +585,8 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
         final Map<String, dynamic> decoded = jsonDecode(historyString);
         _dailyHistory = decoded.map((k, v) => MapEntry(k, v as int));
       }
+
+      await _updateNotifications();
 
       if (mounted) setState(() {});
     } catch (_) {}
@@ -569,6 +705,11 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       await prefs.setInt('currentCount', _currentCount);
       await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
       await prefs.setString('dailyHistory', jsonEncode(_dailyHistory));
+
+      await prefs.setBool('notifSehriStart', _notifSehriStart);
+      await prefs.setBool('notifSehriAlert', _notifSehriAlert);
+      await prefs.setBool('notifIftar', _notifIftar);
+      await prefs.setBool('notifForbidden', _notifForbidden);
     } catch (_) {}
   }
 
@@ -576,7 +717,15 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     if (_dhikrList.isEmpty) return;
 
     setState(() {
-      _currentCount++;
+      final target = _dhikrList[_currentIndex].target;
+
+      // টার্গেট পূর্ণ হলে আবার ১ থেকে শুরু হবে
+      if (target > 0 && _currentCount >= target) {
+        _currentCount = 1;
+      } else {
+        _currentCount++;
+      }
+
       _dhikrList[_currentIndex].lifetimeCount++;
 
       final today = _getTodayKey();
@@ -584,7 +733,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     });
 
     _saveAllData();
-    _pushWidgetData();
   }
 
   void _resetCurrentCount() {
@@ -592,7 +740,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       _currentCount = 0;
     });
     _saveAllData();
-    _pushWidgetData();
   }
 
   void _resetLifetimeCount() {
@@ -618,7 +765,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                 _dhikrList[_currentIndex].lifetimeCount = 0;
               });
               _saveAllData();
-              _pushWidgetData();
               Navigator.pop(ctx);
             },
             child: const Text('Reset', style: TextStyle(color: Colors.white)),
@@ -675,7 +821,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Backup with PIN / Password', style: TextStyle(color: Colors.white)),
         content: Column(
-          mainAxisSize: minAxisSize,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -725,8 +871,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
       ),
     );
   }
-
-  static const MainAxisSize minAxisSize = MainAxisSize.min;
 
   void _showEncryptedRestoreDialog() {
     final pinCtrl = TextEditingController();
@@ -790,7 +934,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                   _currentCount = 0;
                 });
                 _saveAllData();
-                _pushWidgetData();
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Data restored successfully!')),
@@ -877,7 +1020,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                           });
                           setSettingsState(() {});
                           _saveAllData();
-                          _pushWidgetData();
+                          _updateNotifications();
                           Navigator.pop(ctx);
                         },
                         leading: Icon(
@@ -969,7 +1112,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             _currentCount = 0;
                           });
                           _saveAllData();
-                          _pushWidgetData();
                           Navigator.pop(ctx);
                         },
                         title: Text(
@@ -1038,7 +1180,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               });
               setModalState(() {});
               _saveAllData();
-              _pushWidgetData();
               Navigator.pop(ctx);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -1118,7 +1259,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
               });
               setModalState(() {});
               _saveAllData();
-              _pushWidgetData();
               Navigator.pop(ctx);
             },
             child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -1205,7 +1345,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin--);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _pushWidgetData();
+                                      _updateNotifications();
                                     }
                                   },
                                 ),
@@ -1238,7 +1378,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                                       setState(() => _districtOffsetMin++);
                                       setSettingsState(() {});
                                       _saveAllData();
-                                      _pushWidgetData();
+                                      _updateNotifications();
                                     }
                                   },
                                 ),
@@ -1247,6 +1387,75 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                           ),
                         ],
                       ),
+                    ),
+                    const Divider(color: Colors.white12),
+
+                    // নোটিফিকেশন সেটিংস সেকশন
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(Icons.notifications_active, color: Color(0xFF00B074), size: 18),
+                          SizedBox(width: 8),
+                          Text('Notification Alerts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: const Color(0xFF00B074),
+                      title: const Text('Sehri Start Notification', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: const Text('Reminds when Sehri begins', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      value: _notifSehriStart,
+                      onChanged: (val) {
+                        setState(() => _notifSehriStart = val);
+                        setSettingsState(() {});
+                        _saveAllData();
+                        _updateNotifications();
+                      },
+                    ),
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: const Color(0xFF00B074),
+                      title: const Text('Sehri Ending Warning (20m left)', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: const Text('Urgent alert 20 minutes before Sehri ends', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      value: _notifSehriAlert,
+                      onChanged: (val) {
+                        setState(() => _notifSehriAlert = val);
+                        setSettingsState(() {});
+                        _saveAllData();
+                        _updateNotifications();
+                      },
+                    ),
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: const Color(0xFF00B074),
+                      title: const Text('Iftar Notification', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: const Text('Alerts right at sunset/Iftar time', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      value: _notifIftar,
+                      onChanged: (val) {
+                        setState(() => _notifIftar = val);
+                        setSettingsState(() {});
+                        _saveAllData();
+                        _updateNotifications();
+                      },
+                    ),
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: const Color(0xFF00B074),
+                      title: const Text('Forbidden Times Warning', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: const Text('Sunrise, Zawwal & Sunset prayer restrictions', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      value: _notifForbidden,
+                      onChanged: (val) {
+                        setState(() => _notifForbidden = val);
+                        setSettingsState(() {});
+                        _saveAllData();
+                        _updateNotifications();
+                      },
                     ),
                     const Divider(color: Colors.white12),
 
@@ -1287,7 +1496,6 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                             setState(() => _hijriOffset = offset);
                             setSettingsState(() {});
                             _saveAllData();
-                            _pushWidgetData();
                           },
                         );
                       }).toList(),
@@ -1585,7 +1793,7 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
                       Text(
                         currentDhikr.arabic,
                         textAlign: TextAlign.center,
-                        textDirection: ui.TextDirection.rtl,
+                        textDirection: TextDirection.rtl,
                         style: TextStyle(
                           fontSize: 24 * _fontScale,
                           fontWeight: FontWeight.w600,
