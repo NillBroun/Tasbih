@@ -34,27 +34,41 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
 
-      - name: Configure Android Permissions & Manifest
+      - name: Configure Android Permissions, Desugaring & Signing
         run: |
+          # ১. অ্যাপ লেবেল সেট করা
           sed -i 's/android:label="[^"]*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
           
-          # Add background & exact alarm permissions for scheduled notifications
+          # ২. নোটিফিকেশন ও অ্যালার্মের জন্য ব্যাকগ্রাউন্ড পারমিশন যুক্ত করা
           sed -i '/<application/i \
           <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>\
           <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\
           <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\
           <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>' android/app/src/main/AndroidManifest.xml
 
+          # ৩. রিলিজ সাইনিং ও desugaring কনফিগারেশন ইনজেকশন
           python3 -c "
           p = 'android/app/build.gradle.kts'
           try:
               with open(p, 'r') as f:
                   c = f.read()
+
+              # রিলিজ সাইনিং ফিক্স
               c = c.replace('buildTypes {', 'buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }')
+
+              # Core library desugaring সক্রিয় করা
+              c = c.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true')
+
+              # Desugar লাইব্রেরি ডিপেনডেন্সি যোগ করা
+              if 'dependencies {' in c:
+                  c = c.replace('dependencies {', 'dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")')
+              else:
+                  c += '\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n}\n'
+
               with open(p, 'w') as f:
                   f.write(c)
-          except:
-              pass
+          except Exception as e:
+              print('Error:', e)
           "
 
       - name: Build Universal Release APK
