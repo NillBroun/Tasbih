@@ -34,243 +34,27 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
 
-      - name: Configure 4x1 Home Screen Widget
-        run: |
-          mkdir -p android/app/src/main/res/layout
-          mkdir -p android/app/src/main/res/drawable
-          mkdir -p android/app/src/main/res/xml
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
-
-          # ১. ড্রয়েবল ব্যাকগ্রাউন্ড শেপসমূহ
-          cat << 'EOF' > android/app/src/main/res/drawable/widget_pill_background.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#1A1C1E" />
-              <corners android:radius="24dp" />
-          </shape>
-          EOF
-
-          cat << 'EOF' > android/app/src/main/res/drawable/status_pill_default.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <shape xmlns:android="http://schemas.android.com/apk/res/android">
-              <solid android:color="#333333" />
-              <corners android:radius="14dp" />
-          </shape>
-          EOF
-
-          # ২. উইজেট XML লেআউট
-          cat << 'EOF' > android/app/src/main/res/layout/glance_widget_layout.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/widget_root"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
-              android:orientation="horizontal"
-              android:gravity="center_vertical"
-              android:background="@drawable/widget_pill_background"
-              android:paddingLeft="12dp"
-              android:paddingRight="12dp"
-              android:paddingTop="6dp"
-              android:paddingBottom="6dp">
-
-              <LinearLayout
-                  android:layout_width="0dp"
-                  android:layout_height="wrap_content"
-                  android:layout_weight="1"
-                  android:gravity="center_vertical"
-                  android:orientation="horizontal">
-
-                  <TextView
-                      android:id="@+id/widget_tasbih_icon"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="📿"
-                      android:textSize="14sp" />
-
-                  <TextView
-                      android:id="@+id/widget_tasbih_text"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:paddingLeft="4dp"
-                      android:text="Today: 0"
-                      android:textColor="#00B074"
-                      android:textSize="12sp"
-                      android:textStyle="bold" />
-              </LinearLayout>
-
-              <LinearLayout
-                  android:id="@+id/status_pill_container"
-                  android:layout_width="wrap_content"
-                  android:layout_height="wrap_content"
-                  android:orientation="vertical"
-                  android:gravity="center"
-                  android:background="@drawable/status_pill_default"
-                  android:paddingLeft="10dp"
-                  android:paddingRight="10dp"
-                  android:paddingTop="4dp"
-                  android:paddingBottom="4dp">
-
-                  <TextView
-                      android:id="@+id/widget_status_icon"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="☀️"
-                      android:textSize="14sp" />
-
-                  <TextView
-                      android:id="@+id/widget_status_title"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="Salah Open"
-                      android:textColor="#FFFFFF"
-                      android:textSize="10sp" />
-              </LinearLayout>
-
-              <LinearLayout
-                  android:layout_width="0dp"
-                  android:layout_height="wrap_content"
-                  android:layout_weight="1.2"
-                  android:gravity="right|center_vertical"
-                  android:orientation="vertical">
-
-                  <TextView
-                      android:id="@+id/widget_hijri_text"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="Hijri Date"
-                      android:textColor="#FFFFFF"
-                      android:textSize="11sp"
-                      android:textStyle="bold" />
-
-                  <TextView
-                      android:id="@+id/widget_gregorian_text"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="Gregorian"
-                      android:textColor="#9E9E9E"
-                      android:textSize="9sp" />
-              </LinearLayout>
-          </LinearLayout>
-          EOF
-
-          # ৩. উইজেট ইনফো XML
-          cat << 'EOF' > android/app/src/main/res/xml/glance_widget_info.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-              android:minWidth="250dp"
-              android:minHeight="40dp"
-              android:updatePeriodMillis="1800000"
-              android:initialLayout="@layout/glance_widget_layout"
-              android:resizeMode="horizontal|vertical"
-              android:widgetCategory="home_screen" />
-          EOF
-
-          # ৪. GlanceWidgetProvider (home_widget এবং Flutter SharedPreferences সুরক্ষিত রিডার)
-          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/GlanceWidgetProvider.kt
-          package com.ahm.tasbih
-
-          import android.app.PendingIntent
-          import android.appwidget.AppWidgetManager
-          import android.appwidget.AppWidgetProvider
-          import android.content.Context
-          import android.content.Intent
-          import android.content.SharedPreferences
-          import android.graphics.Color
-          import android.widget.RemoteViews
-          import com.ahm.tasbih.R
-
-          class GlanceWidgetProvider : AppWidgetProvider() {
-              override fun onUpdate(
-                  context: Context,
-                  appWidgetManager: AppWidgetManager,
-                  appWidgetIds: IntArray
-              ) {
-                  try {
-                      val widgetData: SharedPreferences = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-
-                      for (appWidgetId in appWidgetIds) {
-                          try {
-                              val views = RemoteViews(context.packageName, R.layout.glance_widget_layout)
-
-                              val todayCount = widgetData.getString("flutter.w_count", "0") ?: "0"
-                              val statusIcon = widgetData.getString("flutter.w_icon", "☀️") ?: "☀️"
-                              val statusTitle = widgetData.getString("flutter.w_title", "Salah Open") ?: "Salah Open"
-                              val hijriText = widgetData.getString("flutter.w_hijri", "") ?: ""
-                              val gregorianText = widgetData.getString("flutter.w_greg", "") ?: ""
-                              val pillState = widgetData.getString("flutter.w_pill", "DEFAULT") ?: "DEFAULT"
-
-                              views.setTextViewText(R.id.widget_tasbih_text, "Today: $todayCount")
-                              views.setTextViewText(R.id.widget_status_icon, statusIcon)
-                              views.setTextViewText(R.id.widget_status_title, statusTitle)
-                              views.setTextViewText(R.id.widget_hijri_text, hijriText)
-                              views.setTextViewText(R.id.widget_gregorian_text, gregorianText)
-
-                              when (pillState) {
-                                  "RED" -> views.setInt(R.id.status_pill_container, "setBackgroundColor", Color.parseColor("#D32F2F"))
-                                  "GREEN" -> views.setInt(R.id.status_pill_container, "setBackgroundColor", Color.parseColor("#00B074"))
-                                  else -> views.setInt(R.id.status_pill_container, "setBackgroundColor", Color.parseColor("#333333"))
-                              }
-
-                              val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                              if (launchIntent != null) {
-                                  val pendingIntent = PendingIntent.getActivity(
-                                      context,
-                                      0,
-                                      launchIntent,
-                                      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                                  )
-                                  views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
-                              }
-
-                              appWidgetManager.updateAppWidget(appWidgetId, views)
-                          } catch (_: Throwable) {}
-                      }
-                  } catch (_: Throwable) {}
-              }
-          }
-          EOF
-
-          # ৫. AndroidManifest.xml-এ রিসিভার ইনজেকশন
-          python3 -c "
-          p = 'android/app/src/main/AndroidManifest.xml'
-          with open(p, 'r') as f:
-              c = f.read()
-
-          receiver = '''
-                  <receiver
-                      android:name=\"com.ahm.tasbih.GlanceWidgetProvider\"
-                      android:exported=\"true\">
-                      <intent-filter>
-                          <action android:name=\"android.appwidget.action.APPWIDGET_UPDATE\" />
-                      </intent-filter>
-                      <meta-data
-                          android:name=\"android.appwidget.provider\"
-                          android:resource=\"@xml/glance_widget_info\" />
-                  </receiver>
-          '''
-          if 'com.ahm.tasbih.GlanceWidgetProvider' not in c:
-              c = c.replace('</application>', receiver + '\n    </application>')
-              with open(p, 'w') as f:
-                  f.write(c)
-          "
-
-      - name: Set App Label to Tasbih & Release Signing
+      - name: Configure Android Permissions & Manifest
         run: |
           sed -i 's/android:label="[^"]*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
+          
+          # Add background & exact alarm permissions for scheduled notifications
+          sed -i '/<application/i \
+          <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>\
+          <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\
+          <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\
+          <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>' android/app/src/main/AndroidManifest.xml
 
           python3 -c "
-          import os
-          for p in ['android/app/build.gradle.kts', 'android/app/build.gradle']:
-              if os.path.exists(p):
-                  with open(p, 'r') as f:
-                      c = f.read()
-                  if 'signingConfig = signingConfigs' not in c and 'signingConfig signingConfigs' not in c:
-                      if p.endswith('.kts'):
-                          c = c.replace('buildTypes {', 'buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }')
-                      else:
-                          c = c.replace('buildTypes {', 'buildTypes {\n        release {\n            signingConfig signingConfigs.debug\n        }')
-                      with open(p, 'w') as f:
-                          f.write(c)
+          p = 'android/app/build.gradle.kts'
+          try:
+              with open(p, 'r') as f:
+                  c = f.read()
+              c = c.replace('buildTypes {', 'buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }')
+              with open(p, 'w') as f:
+                  f.write(c)
+          except:
+              pass
           "
 
       - name: Build Universal Release APK
