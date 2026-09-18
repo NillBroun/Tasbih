@@ -36,30 +36,50 @@ jobs:
 
       - name: Configure Android Permissions, Desugaring & Signing
         run: |
-          # ১. অ্যাপ লেবেল সেট করা
           sed -i 's/android:label="[^"]*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
-          
-          # ২. নোটিফিকেশন ও অ্যালার্মের জন্য ব্যাকগ্রাউন্ড পারমিশন যুক্ত করা
-          sed -i '/<application/i \
-          <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>\
-          <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\
-          <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\
-          <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>' android/app/src/main/AndroidManifest.xml
 
-          # ৩. রিলিজ সাইনিং ও desugaring কনফিগারেশন ইনজেকশন
           python3 -c "
+          import re
+
+          # ১. AndroidManifest.xml আপডেট (Permissions ও Scheduled Receivers)
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest_path, 'r') as f:
+              m = f.read()
+
+          permissions = '''
+    <uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>
+    <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>
+    <uses-permission android:name=\"android.permission.VIBRATE\"/>
+    <uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>
+    <uses-permission android:name=\"android.permission.USE_EXACT_ALARM\"/>
+'''
+          receivers = '''
+        <receiver android:exported=\"false\" android:name=\"com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver\" />
+        <receiver android:exported=\"false\" android:name=\"com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver\">
+            <intent-filter>
+                <action android:name=\"android.intent.action.BOOT_COMPLETED\"/>
+                <action android:name=\"android.intent.action.MY_PACKAGE_REPLACED\"/>
+            </intent-filter>
+        </receiver>
+'''
+          if 'POST_NOTIFICATIONS' not in m:
+              m = m.replace('<application', permissions + '\n    <application')
+
+          if 'ScheduledNotificationReceiver' not in m:
+              m = m.replace('</application>', receivers + '\n    </application>')
+
+          with open(manifest_path, 'w') as f:
+              f.write(m)
+
+          # ২. build.gradle.kts আপডেট (Desugaring ও Release Signing)
           p = 'android/app/build.gradle.kts'
           try:
               with open(p, 'r') as f:
                   c = f.read()
 
-              # রিলিজ সাইনিং ফিক্স
               c = c.replace('buildTypes {', 'buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }')
-
-              # Core library desugaring সক্রিয় করা
               c = c.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true')
 
-              # Desugar লাইব্রেরি ডিপেনডেন্সি যোগ করা
               if 'dependencies {' in c:
                   c = c.replace('dependencies {', 'dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")')
               else:
@@ -68,7 +88,7 @@ jobs:
               with open(p, 'w') as f:
                   f.write(c)
           except Exception as e:
-              print('Error:', e)
+              print('Gradle Config Error:', e)
           "
 
       - name: Build Universal Release APK
