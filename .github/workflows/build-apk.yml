@@ -34,62 +34,61 @@ jobs:
           flutter pub get
           dart run flutter_launcher_icons
 
-      - name: Configure Android Permissions, Desugaring & Signing
+      - name: Configure Android Permissions, Desugaring and Signing
         run: |
           sed -i 's/android:label="[^"]*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
 
-          python3 -c "
-          import re
+          python3 -c '
+          import os
 
-          # ১. AndroidManifest.xml আপডেট (Permissions ও Scheduled Receivers)
-          manifest_path = 'android/app/src/main/AndroidManifest.xml'
-          with open(manifest_path, 'r') as f:
+          # 1. AndroidManifest.xml আপডেট
+          m_path = "android/app/src/main/AndroidManifest.xml"
+          with open(m_path, "r") as f:
               m = f.read()
 
-          permissions = '''
-    <uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>
-    <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>
-    <uses-permission android:name=\"android.permission.VIBRATE\"/>
-    <uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>
-    <uses-permission android:name=\"android.permission.USE_EXACT_ALARM\"/>
-'''
-          receivers = '''
-        <receiver android:exported=\"false\" android:name=\"com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver\" />
-        <receiver android:exported=\"false\" android:name=\"com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver\">
-            <intent-filter>
-                <action android:name=\"android.intent.action.BOOT_COMPLETED\"/>
-                <action android:name=\"android.intent.action.MY_PACKAGE_REPLACED\"/>
-            </intent-filter>
-        </receiver>
-'''
-          if 'POST_NOTIFICATIONS' not in m:
-              m = m.replace('<application', permissions + '\n    <application')
+          perms = """
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.VIBRATE"/>
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+          """
 
-          if 'ScheduledNotificationReceiver' not in m:
-              m = m.replace('</application>', receivers + '\n    </application>')
+          recvs = """
+                  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+                  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                      <intent-filter>
+                          <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                          <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                      </intent-filter>
+                  </receiver>
+          """
 
-          with open(manifest_path, 'w') as f:
+          if "POST_NOTIFICATIONS" not in m:
+              m = m.replace("<application", perms + "\n    <application")
+
+          if "ScheduledNotificationReceiver" not in m:
+              m = m.replace("</application>", recvs + "\n    </application>")
+
+          with open(m_path, "w") as f:
               f.write(m)
 
-          # ২. build.gradle.kts আপডেট (Desugaring ও Release Signing)
-          p = 'android/app/build.gradle.kts'
-          try:
-              with open(p, 'r') as f:
-                  c = f.read()
+          # 2. build.gradle.kts আপডেট
+          b_path = "android/app/build.gradle.kts"
+          with open(b_path, "r") as f:
+              c = f.read()
 
-              c = c.replace('buildTypes {', 'buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }')
-              c = c.replace('compileOptions {', 'compileOptions {\n        isCoreLibraryDesugaringEnabled = true')
+          c = c.replace("buildTypes {", "buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }")
+          c = c.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
 
-              if 'dependencies {' in c:
-                  c = c.replace('dependencies {', 'dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")')
-              else:
-                  c += '\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n}\n'
+          if "dependencies {" in c:
+              c = c.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")")
+          else:
+              c += "\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n}\n"
 
-              with open(p, 'w') as f:
-                  f.write(c)
-          except Exception as e:
-              print('Gradle Config Error:', e)
-          "
+          with open(b_path, "w") as f:
+              f.write(c)
+          '
 
       - name: Build Universal Release APK
         run: flutter build apk --release
