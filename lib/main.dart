@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -24,13 +24,13 @@ void main() async {
 // ============================================================================
 
 class DhikrItem {
-  String id;
-  String title;
-  String arabic;
-  String meaning;
-  int target;
+  final String id;
+  final String title;
+  final String arabic;
+  final String meaning;
+  final int target;
 
-  DhikrItem({
+  const DhikrItem({
     required this.id,
     required this.title,
     required this.arabic,
@@ -51,7 +51,9 @@ class DhikrItem {
         title: json['title']?.toString() ?? 'Dhikr',
         arabic: json['arabic']?.toString() ?? '',
         meaning: json['meaning']?.toString() ?? '',
-        target: (json['target'] is int) ? json['target'] : int.tryParse(json['target'].toString()) ?? 33,
+        target: (json['target'] is int)
+            ? json['target']
+            : int.tryParse(json['target'].toString()) ?? 33,
       );
 }
 
@@ -246,7 +248,6 @@ class SolarEngine {
     RegionInfo region,
     int manualOffsetMinutes,
   ) {
-    // Get actual timezone offset in hours on that specific date (handles DST automatically)
     double tzOffsetHours = 6.0;
     try {
       final loc = tz.getLocation(region.timezone);
@@ -259,7 +260,6 @@ class SolarEngine {
     final int dayOfYear = int.parse(DateFormat('D').format(localDate));
     final double gamma = (2.0 * math.pi / 365.0) * (dayOfYear - 1);
 
-    // Equation of time (minutes)
     final double eqTime = 229.18 *
         (0.000075 +
             0.001868 * math.cos(gamma) -
@@ -267,7 +267,6 @@ class SolarEngine {
             0.014615 * math.cos(2 * gamma) -
             0.040849 * math.sin(2 * gamma));
 
-    // Solar declination (radians)
     final double decl = 0.006918 -
         0.399912 * math.cos(gamma) +
         0.070257 * math.sin(gamma) -
@@ -277,8 +276,6 @@ class SolarEngine {
         0.00148 * math.sin(3 * gamma);
 
     final double latRad = region.lat * math.pi / 180.0;
-
-    // Solar Noon in minutes from midnight
     final double noonMinutes = 720.0 - 4.0 * region.lng - eqTime + (tzOffsetHours * 60.0);
 
     double hourAngleForZenith(double zenithDeg) {
@@ -289,14 +286,12 @@ class SolarEngine {
       return math.acos(cosH) * 180.0 / math.pi;
     }
 
-    // Standard Sunrise/Sunset zenith = 90.833°, Fajr (Muslim World League / Karachi 18°) = 108.0°
     final double haSunrise = hourAngleForZenith(90.833);
     final double haFajr = hourAngleForZenith(108.0);
 
     final int sunrise = (noonMinutes - 4.0 * haSunrise).round() + manualOffsetMinutes;
     final int sunset = (noonMinutes + 4.0 * haSunrise).round() + manualOffsetMinutes;
     final int fajrStart = (noonMinutes - 4.0 * haFajr).round() + manualOffsetMinutes;
-    // Precautionary 3-minute gap between Sehri End (Imsak) and Fajr Azan/Start
     final int sehriEnd = fajrStart - 3;
     final int noon = noonMinutes.round() + manualOffsetMinutes;
     final int zawwalStart = noon - 8;
@@ -331,7 +326,6 @@ class SolarEngine {
     final int currentMin = now.hour * 60 + now.minute;
     final times = calculate(now, region, manualOffsetMinutes);
 
-    // 1. Hijri Date (Advances automatically after Sunset/Maghrib)
     DateTime hijriBaseDate = DateTime(now.year, now.month, now.day);
     if (currentMin >= times.sunsetMin) {
       hijriBaseDate = hijriBaseDate.add(const Duration(days: 1));
@@ -341,7 +335,6 @@ class SolarEngine {
     final String hijriStr = '${hijri.hDay} ${hijri.longMonthName} ${hijri.hYear}';
     final String gregStr = DateFormat('EEE, d MMM').format(now);
 
-    // 2. Determine Day Phase for 4-State Widget Gradient (sunrise, midday, sunset, night)
     String phase = 'night';
     if (currentMin >= times.fajrStartMin && currentMin < times.sunriseMin + 150) {
       phase = 'sunrise';
@@ -353,8 +346,6 @@ class SolarEngine {
       phase = 'night';
     }
 
-    // 3. Evaluate Priority Status (Forbidden -> 3-Min Sehri Gap -> Sehri Countdown -> 30-Min Iftar -> Salah Open)
-    // A. Forbidden Time 1: Sunrise (Sunrise to Sunrise + 15m)
     if (currentMin >= times.sunriseMin && currentMin < times.sunriseMin + 15) {
       return LiveTimingStatus(
         icon: '⛔',
@@ -367,7 +358,6 @@ class SolarEngine {
       );
     }
 
-    // B. Forbidden Time 2: Zawwal / Solar Noon (Noon - 8m to Noon + 8m)
     if (currentMin >= times.zawwalStartMin && currentMin < times.solarNoonMin + 8) {
       return LiveTimingStatus(
         icon: '⛔',
@@ -380,7 +370,6 @@ class SolarEngine {
       );
     }
 
-    // C. Forbidden Time 3: Sunset (Sunset - 15m to Sunset)
     if (currentMin >= times.sunsetMin - 15 && currentMin < times.sunsetMin) {
       return LiveTimingStatus(
         icon: '⛔',
@@ -393,7 +382,6 @@ class SolarEngine {
       );
     }
 
-    // D. Precautionary 3-Minute Gap between Sehri End & Fajr Start
     if (currentMin >= times.sehriEndMin && currentMin < times.fajrStartMin) {
       final int rem = times.fajrStartMin - currentMin;
       return LiveTimingStatus(
@@ -407,7 +395,6 @@ class SolarEngine {
       );
     }
 
-    // E. Sehri Ending Window (30 minutes before Sehri End)
     if (currentMin >= times.sehriEndMin - 30 && currentMin < times.sehriEndMin) {
       final int rem = times.sehriEndMin - currentMin;
       return LiveTimingStatus(
@@ -421,7 +408,6 @@ class SolarEngine {
       );
     }
 
-    // F. Iftar Window (30 minutes after Sunset/Maghrib begins)
     if (currentMin >= times.sunsetMin && currentMin < times.sunsetMin + 30) {
       return LiveTimingStatus(
         icon: '🍽️',
@@ -434,7 +420,6 @@ class SolarEngine {
       );
     }
 
-    // G. Normal Open Salah Status with Phase Icon
     final String openIcon = phase == 'sunrise'
         ? '🌅'
         : phase == 'midday'
@@ -507,7 +492,6 @@ class NotificationService {
       final now = tz.TZDateTime.now(location);
       int idCounter = 100;
 
-      // Schedule for Today (dayOffset = 0) and Tomorrow (dayOffset = 1)
       for (int dayOffset = 0; dayOffset <= 1; dayOffset++) {
         final targetDate = now.add(Duration(days: dayOffset));
         final solar = SolarEngine.calculate(targetDate, region, manualOffsetMinutes);
@@ -545,7 +529,6 @@ class NotificationService {
           }
         }
 
-        // 1. Sehri Start (60 mins before Sehri End)
         if (notifSehriStart) {
           await scheduleAtMinute(
             solar.sehriEndMin - 60,
@@ -554,7 +537,6 @@ class NotificationService {
           );
         }
 
-        // 2. Sehri Ending Warning (20 mins before Sehri End)
         if (notifSehriEnd) {
           await scheduleAtMinute(
             solar.sehriEndMin - 20,
@@ -563,7 +545,6 @@ class NotificationService {
           );
         }
 
-        // 3. Iftar / Maghrib Notification
         if (notifIftar) {
           await scheduleAtMinute(
             solar.sunsetMin,
@@ -572,7 +553,6 @@ class NotificationService {
           );
         }
 
-        // 4. Three Forbidden Salah Windows (Sunrise, Zawwal, Sunset)
         if (notifForbidden) {
           await scheduleAtMinute(
             solar.sunriseMin,
@@ -635,7 +615,6 @@ class TasbihApp extends StatefulWidget {
 }
 
 class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
-  // Core State
   List<DhikrItem> _dhikrList = [];
   int _selectedDhikrIndex = 0;
   int _sessionCount = 0;
@@ -643,14 +622,12 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
   int _lifetimeCount = 0;
   Map<String, int> _weeklyHistory = {};
 
-  // Preferences
   AppThemeMode _themeMode = AppThemeMode.dark;
   double _fontScale = 1.0;
-  int _regionIndex = 0; // Default: Bangladesh - Dhaka
-  int _manualTimeOffset = 0; // -30 to +30 mins
-  int _hijriDayOffset = 0; // -2 to +2 days
+  int _regionIndex = 0;
+  int _manualTimeOffset = 0;
+  int _hijriDayOffset = 0;
 
-  // 4 Notification Toggles
   bool _notifSehriStart = false;
   bool _notifSehriEnd = false;
   bool _notifIftar = false;
@@ -716,7 +693,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
     );
     _loadData();
 
-    // Update solar status & widget every 30 seconds
     _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _refreshLiveStatusAndWidget();
     });
@@ -741,7 +717,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Load Dhikr List
     final rawList = prefs.getString('dhikr_list');
     if (rawList != null) {
       try {
@@ -757,7 +732,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
     _sessionCount = prefs.getInt('session_count') ?? 0;
     _lifetimeCount = prefs.getInt('lifetime_count') ?? 0;
 
-    // Weekly history & daily rollover
     final rawHistory = prefs.getString('weekly_history');
     if (rawHistory != null) {
       try {
@@ -767,7 +741,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
     }
     _todayCount = _weeklyHistory[_todayKey()] ?? 0;
 
-    // Preferences
     final themeIdx = prefs.getInt('theme_mode') ?? 0;
     _themeMode = AppThemeMode.values[themeIdx.clamp(0, AppThemeMode.values.length - 1)];
     _fontScale = prefs.getDouble('font_scale') ?? 1.0;
@@ -776,7 +749,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
     _manualTimeOffset = (prefs.getInt('manual_time_offset') ?? 0).clamp(-30, 30);
     _hijriDayOffset = (prefs.getInt('hijri_day_offset') ?? 0).clamp(-2, 2);
 
-    // Notifications
     _notifSehriStart = prefs.getBool('notif_sehri_start') ?? false;
     _notifSehriEnd = prefs.getBool('notif_sehri_end') ?? false;
     _notifIftar = prefs.getBool('notif_iftar') ?? false;
@@ -839,7 +811,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
   void _incrementCounter() {
     final currentDhikr = _dhikrList[_selectedDhikrIndex];
     setState(() {
-      // Auto-restart from 1 on the tap after reaching target
       if (_sessionCount >= currentDhikr.target) {
         _sessionCount = 1;
       } else {
@@ -888,15 +859,14 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
     _saveAll();
   }
 
-  // Theme Palette Helper
   Color get _bgColor {
     switch (_themeMode) {
       case AppThemeMode.light:
-        return const Color(0xFFF8F9FA); // Porcelain White
+        return const Color(0xFFF8F9FA);
       case AppThemeMode.amoled:
-        return const Color(0xFF000000); // Pure AMOLED Black
+        return const Color(0xFF000000);
       case AppThemeMode.dark:
-        return const Color(0xFF0F131A); // Deep Slate Dark
+        return const Color(0xFF0F131A);
     }
   }
 
@@ -940,7 +910,7 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
   }
 
   // ==========================================================================
-  // HOME SCREEN (MINIMALIST: SINGLE SETTINGS ICON, DHIKR CARD, TAP RING)
+  // HOME SCREEN
   // ==========================================================================
 
   Widget _buildHomeScreen() {
@@ -960,7 +930,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 children: [
-                  // TOP BAR: App Title | Live Status & Hijri Pill | Single Settings Icon
                   Row(
                     children: [
                       Text(
@@ -1030,7 +999,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
 
                   const SizedBox(height: 18),
 
-                  // DHIKR DISPLAY CARD (Title, Arabic, English Meaning, Up/Down Arrows)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -1114,7 +1082,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // CENTER COUNTER RING
                   Expanded(
                     child: Center(
                       child: Stack(
@@ -1165,7 +1132,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // BOTTOM BAR: Reset Session (0) | Lifetime Total (Tap to reset with confirm)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1258,7 +1224,7 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
   }
 
   // ==========================================================================
-  // SETTINGS PAGE (DHIKR COLLECTION, REGION/TIMEZONE, NOTIFICATIONS, THEMES)
+  // SETTINGS PAGE
   // ==========================================================================
 
   Widget _buildSettingsPage() {
@@ -1287,7 +1253,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              // 1. DHIKR COLLECTION MANAGER
               _sectionHeader('Dhikr Collection'),
               _settingsCard(
                 child: ListTile(
@@ -1311,7 +1276,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
 
               const SizedBox(height: 18),
 
-              // 2. COUNTRY, CITY & TIMEZONE + LIVE OFFSET PREVIEW
               _sectionHeader('Location, Timezone & Solar Sync'),
               _settingsCard(
                 child: Padding(
@@ -1349,7 +1313,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
                       ),
                       const Divider(height: 22),
 
-                      // Live Preview Box (Sehri End, Fajr 3m Gap, Iftar)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(10),
@@ -1379,7 +1342,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 12),
 
-                      // Manual Minute Offset (-30 to +30 mins)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1419,7 +1381,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
                         ],
                       ),
 
-                      // Hijri Day Adjustment (-2 to +2 days)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1459,7 +1420,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
 
               const SizedBox(height: 18),
 
-              // 3. SMART NOTIFICATIONS (4 SEPARATE SWITCHES)
               _sectionHeader('Smart Notifications'),
               _settingsCard(
                 child: Column(
@@ -1521,7 +1481,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
 
               const SizedBox(height: 18),
 
-              // 4. APPEARANCE & FONT SIZE
               _sectionHeader('Appearance & Font Scaling'),
               _settingsCard(
                 child: Padding(
@@ -1569,7 +1528,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
 
               const SizedBox(height: 18),
 
-              // 5. LAST 7 DAYS PROGRESS CHART
               _sectionHeader('Last 7 Days Progress'),
               _settingsCard(
                 child: Padding(
@@ -1580,7 +1538,6 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
 
               const SizedBox(height: 18),
 
-              // 6. ABOUT TASBIH (QURAN VERSE & DEVELOPER AHM)
               _sectionHeader('About Tasbih'),
               _settingsCard(
                 child: Padding(
@@ -1869,7 +1826,7 @@ class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
   }
 
   // ==========================================================================
-  // DHIKR COLLECTION MANAGER (ADD, EDIT & SAFE DELETE WITH CONFIRMATION)
+  // DHIKR COLLECTION MANAGER
   // ==========================================================================
 
   Widget _buildDhikrManagerPage() {
