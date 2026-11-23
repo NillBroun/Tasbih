@@ -28,11 +28,20 @@ jobs:
         run: |
           flutter create . --platforms=android --org com.ahm --project-name tasbih
           
+          # Ensure MainActivity.kt exists in com/ahm/tasbih
+          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
+          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/MainActivity.kt
+          package com.ahm.tasbih
+
+          import io.flutter.embedding.android.FlutterActivity
+
+          class MainActivity : FlutterActivity()
+          EOF
+
           # Create widget drawable & layout directories
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/layout
           mkdir -p android/app/src/main/res/xml
-          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
 
           # 4 Time-of-day Pill Backgrounds (Sunrise, Midday, Sunset, Night)
           cat << 'EOF' > android/app/src/main/res/drawable/widget_bg_sunrise.xml
@@ -111,7 +120,6 @@ jobs:
                   android:paddingStart="14dp"
                   android:paddingEnd="14dp">
 
-                  <!-- Left: Today's Count -->
                   <TextView
                       android:id="@+id/tv_today_count"
                       android:layout_width="wrap_content"
@@ -123,7 +131,6 @@ jobs:
                       android:textSize="11.5sp"
                       android:textStyle="bold" />
 
-                  <!-- Center: Single-line Icon + Live Salah/Sehri/Iftar/Forbidden Status -->
                   <TextView
                       android:id="@+id/tv_live_status"
                       android:layout_width="0dp"
@@ -139,7 +146,6 @@ jobs:
                       android:textSize="11.5sp"
                       android:textStyle="bold" />
 
-                  <!-- Right: Hijri & Gregorian Date -->
                   <LinearLayout
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
@@ -185,7 +191,7 @@ jobs:
               android:widgetCategory="home_screen" />
           EOF
 
-          # Crash-Proof Kotlin AppWidgetProvider (Tapping opens MainActivity cleanly)
+          # Crash-Proof Kotlin AppWidgetProvider
           cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
           package com.ahm.tasbih
 
@@ -234,9 +240,9 @@ jobs:
                           views.setTextViewText(R.id.tv_hijri_date, hijriText)
                           views.setTextViewText(R.id.tv_greg_date, gregText)
 
-                          val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                              ?: Intent(context, MainActivity::class.java)
-                          launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                          val launchIntent = Intent(context, MainActivity::class.java).apply {
+                              flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                          }
 
                           val pendingIntent = PendingIntent.getActivity(
                               context,
@@ -254,7 +260,7 @@ jobs:
           }
           EOF
 
-          # Patch AndroidManifest.xml with Permissions & Widget Receiver safely
+          # Patch AndroidManifest.xml with App Label "Tasbih", Permissions & Widget Receiver
           python3 -c '
           import xml.etree.ElementTree as ET
           manifest_path = "android/app/src/main/AndroidManifest.xml"
@@ -278,8 +284,9 @@ jobs:
 
           app = root.find("application")
           if app is not None:
+              app.set(ns + "label", "Tasbih")
               receiver = ET.SubElement(app, "receiver")
-              receiver.set(ns + "name", ".TasbihWidgetProvider")
+              receiver.set(ns + "name", "com.ahm.tasbih.TasbihWidgetProvider")
               receiver.set(ns + "exported", "true")
               receiver.set(ns + "label", "Tasbih Slim Bar")
 
@@ -294,7 +301,7 @@ jobs:
           tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
           '
 
-          # Enable Core Library Desugaring in build.gradle(.kts) for flutter_local_notifications
+          # Enable Core Library Desugaring & Disable R8 Minification (prevents plugin/widget class stripping)
           python3 -c '
           import os
           for path in ["android/app/build.gradle.kts", "android/app/build.gradle"]:
@@ -304,18 +311,23 @@ jobs:
                   if "isCoreLibraryDesugaringEnabled" not in content and "coreLibraryDesugaringEnabled" not in content:
                       if path.endswith(".kts"):
                           content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
+                          content = content.replace("release {", "release {\n            isMinifyEnabled = false\n            isShrinkResources = false")
                           content += "\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.1.4\")\n}\n"
                       else:
                           content = content.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true")
+                          content = content.replace("release {", "release {\n            minifyEnabled false\n            shrinkResources false")
                           content += "\ndependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.1.4\"\n}\n"
                   with open(path, "w") as f:
                       f.write(content)
           '
 
-      - name: Get Dependencies & Build APK
+      - name: Get Dependencies & Generate Custom App Icon
         run: |
           flutter pub get
-          flutter build apk --release
+          dart run flutter_launcher_icons
+
+      - name: Build Release APK
+        run: flutter build apk --release
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
