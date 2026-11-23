@@ -1,97 +1,321 @@
-name: Build APK
+name: Build Release APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v3
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
 
-      - name: Recreate Clean Android Project Structure
+      - name: Generate Android Platform Files & Native 4x1 Capsule Widget
         run: |
-          rm -rf android
-          flutter create --platforms=android --org com.ahm --project-name tasbih .
+          flutter create . --platforms=android --org com.ahm --project-name tasbih
+          
+          # Create widget drawable & layout directories
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/layout
+          mkdir -p android/app/src/main/res/xml
+          mkdir -p android/app/src/main/kotlin/com/ahm/tasbih
 
-      - name: Setup Launcher Icons
-        run: |
-          flutter pub get
-          dart run flutter_launcher_icons
+          # 4 Time-of-day Pill Backgrounds (Sunrise, Midday, Sunset, Night)
+          cat << 'EOF' > android/app/src/main/res/drawable/widget_bg_sunrise.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <gradient
+                  android:angle="0"
+                  android:startColor="#E63A2318"
+                  android:centerColor="#E62B2420"
+                  android:endColor="#E61A2634"
+                  android:type="linear" />
+              <corners android:radius="24dp" />
+              <stroke android:width="1dp" android:color="#40FBBF24" />
+          </shape>
+          EOF
 
-      - name: Configure Android Permissions, Desugaring and Signing
-        run: |
-          sed -i 's/android:label="[^"]*"/android:label="Tasbih"/g' android/app/src/main/AndroidManifest.xml
+          cat << 'EOF' > android/app/src/main/res/drawable/widget_bg_midday.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <gradient
+                  android:angle="0"
+                  android:startColor="#E6142838"
+                  android:centerColor="#E6193242"
+                  android:endColor="#E6142838"
+                  android:type="linear" />
+              <corners android:radius="24dp" />
+              <stroke android:width="1dp" android:color="#4038BDF8" />
+          </shape>
+          EOF
 
+          cat << 'EOF' > android/app/src/main/res/drawable/widget_bg_sunset.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <gradient
+                  android:angle="0"
+                  android:startColor="#E6381D2A"
+                  android:centerColor="#E62D1E32"
+                  android:endColor="#E61C1B29"
+                  android:type="linear" />
+              <corners android:radius="24dp" />
+              <stroke android:width="1dp" android:color="#40FB7185" />
+          </shape>
+          EOF
+
+          cat << 'EOF' > android/app/src/main/res/drawable/widget_bg_night.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <gradient
+                  android:angle="0"
+                  android:startColor="#E612151E"
+                  android:centerColor="#E6161B26"
+                  android:endColor="#E610131A"
+                  android:type="linear" />
+              <corners android:radius="24dp" />
+              <stroke android:width="1dp" android:color="#3394A3B8" />
+          </shape>
+          EOF
+
+          # Ultra-Slim 44dp Google-Search-Bar Style 4x1 Capsule Layout
+          cat << 'EOF' > android/app/src/main/res/layout/tasbih_widget_layout.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:paddingStart="4dp"
+              android:paddingEnd="4dp">
+
+              <LinearLayout
+                  android:id="@+id/widget_container"
+                  android:layout_width="match_parent"
+                  android:layout_height="44dp"
+                  android:layout_gravity="center_vertical"
+                  android:background="@drawable/widget_bg_night"
+                  android:gravity="center_vertical"
+                  android:orientation="horizontal"
+                  android:paddingStart="14dp"
+                  android:paddingEnd="14dp">
+
+                  <!-- Left: Today's Count -->
+                  <TextView
+                      android:id="@+id/tv_today_count"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:ellipsize="end"
+                      android:maxLines="1"
+                      android:text="📿 Today: 0"
+                      android:textColor="#34D399"
+                      android:textSize="11.5sp"
+                      android:textStyle="bold" />
+
+                  <!-- Center: Single-line Icon + Live Salah/Sehri/Iftar/Forbidden Status -->
+                  <TextView
+                      android:id="@+id/tv_live_status"
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_weight="1"
+                      android:ellipsize="end"
+                      android:gravity="center"
+                      android:maxLines="1"
+                      android:paddingStart="6dp"
+                      android:paddingEnd="6dp"
+                      android:text="🌙 Salah Open"
+                      android:textColor="#F8FAFC"
+                      android:textSize="11.5sp"
+                      android:textStyle="bold" />
+
+                  <!-- Right: Hijri & Gregorian Date -->
+                  <LinearLayout
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:gravity="end"
+                      android:orientation="vertical">
+
+                      <TextView
+                          android:id="@+id/tv_hijri_date"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:maxLines="1"
+                          android:text="14 Jumada II 1448"
+                          android:textColor="#F1F5F9"
+                          android:textSize="9.5sp"
+                          android:textStyle="bold" />
+
+                      <TextView
+                          android:id="@+id/tv_greg_date"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:ellipsize="end"
+                          android:maxLines="1"
+                          android:text="Tue, 24 Nov"
+                          android:textColor="#94A3B8"
+                          android:textSize="8.5sp" />
+                  </LinearLayout>
+              </LinearLayout>
+          </FrameLayout>
+          EOF
+
+          # AppWidget Provider Metadata (4x1 Slim Capsule)
+          cat << 'EOF' > android/app/src/main/res/xml/tasbih_widget_info.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+              android:initialLayout="@layout/tasbih_widget_layout"
+              android:minWidth="250dp"
+              android:minHeight="40dp"
+              android:targetCellWidth="4"
+              android:targetCellHeight="1"
+              android:resizeMode="horizontal"
+              android:updatePeriodMillis="1800000"
+              android:widgetCategory="home_screen" />
+          EOF
+
+          # Crash-Proof Kotlin AppWidgetProvider (Tapping opens MainActivity cleanly)
+          cat << 'EOF' > android/app/src/main/kotlin/com/ahm/tasbih/TasbihWidgetProvider.kt
+          package com.ahm.tasbih
+
+          import android.app.PendingIntent
+          import android.appwidget.AppWidgetManager
+          import android.appwidget.AppWidgetProvider
+          import android.content.Context
+          import android.content.Intent
+          import android.graphics.Color
+          import android.widget.RemoteViews
+
+          class TasbihWidgetProvider : AppWidgetProvider() {
+              override fun onUpdate(
+                  context: Context,
+                  appWidgetManager: AppWidgetManager,
+                  appWidgetIds: IntArray
+              ) {
+                  val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+                  val todayText = prefs.getString("today_text", "📿 Today: 0") ?: "📿 Today: 0"
+                  val statusText = prefs.getString("status_text", "🌙 Salah Open") ?: "🌙 Salah Open"
+                  val statusColorHex = prefs.getString("status_color", "#F8FAFC") ?: "#F8FAFC"
+                  val hijriText = prefs.getString("hijri_text", "14 Jumada II 1448") ?: "14 Jumada II 1448"
+                  val gregText = prefs.getString("greg_text", "Tue, 24 Nov") ?: "Tue, 24 Nov"
+                  val phase = prefs.getString("day_phase", "night") ?: "night"
+
+                  val bgRes = when (phase) {
+                      "sunrise" -> R.drawable.widget_bg_sunrise
+                      "midday" -> R.drawable.widget_bg_midday
+                      "sunset" -> R.drawable.widget_bg_sunset
+                      else -> R.drawable.widget_bg_night
+                  }
+
+                  val statusColor = try {
+                      Color.parseColor(statusColorHex)
+                  } catch (e: Exception) {
+                      Color.WHITE
+                  }
+
+                  for (appWidgetId in appWidgetIds) {
+                      try {
+                          val views = RemoteViews(context.packageName, R.layout.tasbih_widget_layout)
+                          views.setInt(R.id.widget_container, "setBackgroundResource", bgRes)
+                          views.setTextViewText(R.id.tv_today_count, todayText)
+                          views.setTextViewText(R.id.tv_live_status, statusText)
+                          views.setTextColor(R.id.tv_live_status, statusColor)
+                          views.setTextViewText(R.id.tv_hijri_date, hijriText)
+                          views.setTextViewText(R.id.tv_greg_date, gregText)
+
+                          val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                              ?: Intent(context, MainActivity::class.java)
+                          launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+
+                          val pendingIntent = PendingIntent.getActivity(
+                              context,
+                              appWidgetId,
+                              launchIntent,
+                              PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                          )
+                          views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+                          appWidgetManager.updateAppWidget(appWidgetId, views)
+                      } catch (e: Exception) {
+                          e.printStackTrace()
+                      }
+                  }
+              }
+          }
+          EOF
+
+          # Patch AndroidManifest.xml with Permissions & Widget Receiver safely
           python3 -c '
-          import os
+          import xml.etree.ElementTree as ET
+          manifest_path = "android/app/src/main/AndroidManifest.xml"
+          ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
+          tree = ET.parse(manifest_path)
+          root = tree.getroot()
+          ns = "{http://schemas.android.com/apk/res/android}"
 
-          # 1. AndroidManifest.xml আপডেট
-          m_path = "android/app/src/main/AndroidManifest.xml"
-          with open(m_path, "r") as f:
-              m = f.read()
+          perms = [
+              "android.permission.POST_NOTIFICATIONS",
+              "android.permission.SCHEDULE_EXACT_ALARM",
+              "android.permission.RECEIVE_BOOT_COMPLETED",
+              "android.permission.VIBRATE"
+          ]
+          existing_perms = [el.attrib.get(ns + "name") for el in root.findall("uses-permission")]
+          for p in perms:
+              if p not in existing_perms:
+                  el = ET.Element("uses-permission")
+                  el.set(ns + "name", p)
+                  root.insert(0, el)
 
-          perms = """
-              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-              <uses-permission android:name="android.permission.VIBRATE"/>
-              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-              <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
-          """
+          app = root.find("application")
+          if app is not None:
+              receiver = ET.SubElement(app, "receiver")
+              receiver.set(ns + "name", ".TasbihWidgetProvider")
+              receiver.set(ns + "exported", "true")
+              receiver.set(ns + "label", "Tasbih Slim Bar")
 
-          recvs = """
-                  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
-                  <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
-                      <intent-filter>
-                          <action android:name="android.intent.action.BOOT_COMPLETED"/>
-                          <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
-                      </intent-filter>
-                  </receiver>
-          """
+              intent_filter = ET.SubElement(receiver, "intent-filter")
+              action = ET.SubElement(intent_filter, "action")
+              action.set(ns + "name", "android.appwidget.action.APPWIDGET_UPDATE")
 
-          if "POST_NOTIFICATIONS" not in m:
-              m = m.replace("<application", perms + "\n    <application")
+              meta = ET.SubElement(receiver, "meta-data")
+              meta.set(ns + "name", "android.appwidget.provider")
+              meta.set(ns + "resource", "@xml/tasbih_widget_info")
 
-          if "ScheduledNotificationReceiver" not in m:
-              m = m.replace("</application>", recvs + "\n    </application>")
-
-          with open(m_path, "w") as f:
-              f.write(m)
-
-          # 2. build.gradle.kts আপডেট
-          b_path = "android/app/build.gradle.kts"
-          with open(b_path, "r") as f:
-              c = f.read()
-
-          c = c.replace("buildTypes {", "buildTypes {\n        getByName(\"release\") {\n            signingConfig = signingConfigs.getByName(\"debug\")\n        }")
-          c = c.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
-
-          if "dependencies {" in c:
-              c = c.replace("dependencies {", "dependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")")
-          else:
-              c += "\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.0.4\")\n}\n"
-
-          with open(b_path, "w") as f:
-              f.write(c)
+          tree.write(manifest_path, encoding="utf-8", xml_declaration=True)
           '
 
-      - name: Build Universal Release APK
-        run: flutter build apk --release
+          # Enable Core Library Desugaring in build.gradle(.kts) for flutter_local_notifications
+          python3 -c '
+          import os
+          for path in ["android/app/build.gradle.kts", "android/app/build.gradle"]:
+              if os.path.exists(path):
+                  with open(path, "r") as f:
+                      content = f.read()
+                  if "isCoreLibraryDesugaringEnabled" not in content and "coreLibraryDesugaringEnabled" not in content:
+                      if path.endswith(".kts"):
+                          content = content.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
+                          content += "\ndependencies {\n    coreLibraryDesugaring(\"com.android.tools:desugar_jdk_libs:2.1.4\")\n}\n"
+                      else:
+                          content = content.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true")
+                          content += "\ndependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.1.4\"\n}\n"
+                  with open(path, "w") as f:
+                      f.write(content)
+          '
+
+      - name: Get Dependencies & Build APK
+        run: |
+          flutter pub get
+          flutter build apk --release
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
