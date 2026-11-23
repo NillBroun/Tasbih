@@ -1,1076 +1,1861 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:hijri/hijri_calendar.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService().init();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  tz_data.initializeTimeZones();
+  await NotificationService.instance.init();
   runApp(const TasbihApp());
 }
 
-class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-  NotificationService._internal();
-
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  Future<void> init() async {
-    tz.initializeTimeZones();
-
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const InitializationSettings initSettings =
-        InitializationSettings(android: androidSettings);
-
-    await flutterLocalNotificationsPlugin.initialize(initSettings);
-
-    final androidImplementation = flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-
-    // অ্যান্ড্রয়েড ১৩+ রানটাইম পারমিশন নেওয়া
-    await androidImplementation?.requestNotificationsPermission();
-    await androidImplementation?.requestExactAlarmsPermission();
-
-    // নোটিফিকেশন চ্যানেল তৈরি
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'prayer_alerts_critical',
-      'Prayer & Sehri Alerts',
-      description: 'Alerts for Sehri, Iftar and Forbidden times',
-      importance: Importance.max,
-      playSound: true,
-      enableVibration: true,
-    );
-
-    await androidImplementation?.createNotificationChannel(channel);
-  }
-
-  Future<void> showInstantTestNotification() async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'prayer_alerts_critical',
-      'Prayer & Sehri Alerts',
-      channelDescription: 'Alerts for Sehri, Iftar and Forbidden times',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-    );
-
-    await flutterLocalNotificationsPlugin.show(
-      999,
-      '🔔 টেস্ট নোটিফিকেশন',
-      'আলহামদুলিল্লাহ! নোটিফিকেশন সফলভাবে কাজ করছে।',
-      const NotificationDetails(android: androidDetails),
-    );
-  }
-
-  Future<void> _scheduleAt(int id, String title, String body, DateTime scheduledTime, {bool isAlert = false}) async {
-    final now = DateTime.now();
-    if (scheduledTime.isBefore(now)) return;
-
-    final tzDateTime = tz.TZDateTime.from(scheduledTime, tz.local);
-
-    final androidDetails = AndroidNotificationDetails(
-      'prayer_alerts_critical',
-      'Prayer & Sehri Alerts',
-      channelDescription: 'Prayer, Forbidden times, Sehri and Iftar notifications',
-      importance: isAlert ? Importance.max : Importance.high,
-      priority: isAlert ? Priority.high : Priority.defaultPriority,
-      playSound: true,
-      enableVibration: true,
-    );
-
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzDateTime,
-      NotificationDetails(android: androidDetails),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
-  }
-
-  DateTime _minToDate(DateTime base, int totalMin) {
-    int h = (totalMin % 1440) ~/ 60;
-    int m = (totalMin % 1440) % 60;
-    return DateTime(base.year, base.month, base.day, h, m);
-  }
-
-  Future<void> cancelById(int id) async {
-    await flutterLocalNotificationsPlugin.cancel(id);
-  }
-
-  Future<void> scheduleDailyTimers({
-    required Map<String, int> times,
-    required bool enableSehriStart,
-    required bool enableSehriAlert,
-    required bool enableIftar,
-    required bool enableForbidden,
-    int sehriAlertMinutesBefore = 20,
-  }) async {
-    final now = DateTime.now();
-
-    int sehriEndMin = times['sehriEnd']!;
-    int sunriseMin = times['sunrise']!;
-    int noonMin = times['noon']!;
-    int sunsetMin = times['sunset']!;
-    int iftarMin = times['iftar']!;
-
-    // ১. সেহরি শুরু
-    if (enableSehriStart) {
-      await _scheduleAt(
-        101,
-        '🥣 সেহরির সময় শুরু',
-        'বরকতময় সেহরির সময় শুরু হয়েছে। সুন্নাত অনুযায়ী সেহরি গ্রহণ করুন।',
-        _minToDate(now, sehriEndMin - 75),
-      );
-    } else {
-      await cancelById(101);
-    }
-
-    // ২. সেহরি শেষ সতর্কবার্তা
-    if (enableSehriAlert) {
-      await _scheduleAt(
-        102,
-        '⚠️ সেহরি শেষ সতর্কবার্তা!',
-        'সেহরির সময় শেষ হতে আর মাত্র $sehriAlertMinutesBefore মিনিট বাকি!',
-        _minToDate(now, sehriEndMin - sehriAlertMinutesBefore),
-        isAlert: true,
-      );
-    } else {
-      await cancelById(102);
-    }
-
-    // ৩. ইফতার
-    if (enableIftar) {
-      await _scheduleAt(
-        103,
-        '🍽️ ইফতারের সময় হয়েছে',
-        'সূর্যাস্ত হয়েছে। দুআ পাঠ করে ইফতার সম্পন্ন করুন।',
-        _minToDate(now, iftarMin),
-        isAlert: true,
-      );
-    } else {
-      await cancelById(103);
-    }
-
-    // ৪. নিষিদ্ধ সময়সমূহ
-    if (enableForbidden) {
-      await _scheduleAt(
-        104,
-        '⛔ নামাজের নিষিদ্ধ সময় (সূর্যোদয়)',
-        'সূর্যোদয়ের নিষিদ্ধ সময় শুরু হয়েছে। ১৮ মিনিট সালাত বন্ধ রাখুন।',
-        _minToDate(now, sunriseMin),
-      );
-      await _scheduleAt(
-        105,
-        '⛔ নামাজের নিষিদ্ধ সময় (জাওয়াল)',
-        'সূর্য মাথার ঠিক উপরে অবস্থান করছে। যোহর পর্যন্ত সালাত বন্ধ রাখুন।',
-        _minToDate(now, noonMin - 12),
-      );
-      await _scheduleAt(
-        106,
-        '⛔ নামাজের নিষিদ্ধ সময় (সূর্যাস্ত)',
-        'সূর্যাস্তের নিষিদ্ধ সময় শুরু হয়েছে। মাগরিব পর্যন্ত নফল সালাত বন্ধ রাখুন।',
-        _minToDate(now, sunsetMin - 15),
-      );
-    } else {
-      await cancelById(104);
-      await cancelById(105);
-      await cancelById(106);
-    }
-  }
-}
+// ============================================================================
+// 1. DATA MODELS
+// ============================================================================
 
 class DhikrItem {
+  String id;
   String title;
   String arabic;
   String meaning;
   int target;
-  int lifetimeCount;
 
   DhikrItem({
+    required this.id,
     required this.title,
     required this.arabic,
     required this.meaning,
-    this.target = 33,
-    this.lifetimeCount = 0,
+    required this.target,
   });
 
   Map<String, dynamic> toJson() => {
-    'title': title,
-    'arabic': arabic,
-    'meaning': meaning,
-    'target': target,
-    'lifetimeCount': lifetimeCount,
-  };
+        'id': id,
+        'title': title,
+        'arabic': arabic,
+        'meaning': meaning,
+        'target': target,
+      };
 
   factory DhikrItem.fromJson(Map<String, dynamic> json) => DhikrItem(
-    title: json['title'] ?? '',
-    arabic: json['arabic'] ?? '',
-    meaning: json['meaning'] ?? '',
-    target: json['target'] ?? 33,
-    lifetimeCount: json['lifetimeCount'] ?? 0,
-  );
+        id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        title: json['title']?.toString() ?? 'Dhikr',
+        arabic: json['arabic']?.toString() ?? '',
+        meaning: json['meaning']?.toString() ?? '',
+        target: (json['target'] is int) ? json['target'] : int.tryParse(json['target'].toString()) ?? 33,
+      );
 }
 
-class CountryPreset {
+class RegionInfo {
   final String name;
+  final String timezone;
+  final String utcLabel;
   final double lat;
   final double lng;
 
-  const CountryPreset(this.name, this.lat, this.lng);
+  const RegionInfo(this.name, this.timezone, this.utcLabel, this.lat, this.lng);
 }
 
-class SolarCalculator {
-  static const List<CountryPreset> worldCountries = [
-    CountryPreset("Afghanistan", 34.5553, 69.2075),
-    CountryPreset("Albania", 41.3275, 19.8187),
-    CountryPreset("Algeria", 36.7538, 3.0588),
-    CountryPreset("Argentina", -34.6037, -58.3816),
-    CountryPreset("Australia", -35.2809, 149.1300),
-    CountryPreset("Austria", 48.2082, 16.3738),
-    CountryPreset("Azerbaijan", 40.4093, 49.8671),
-    CountryPreset("Bahrain", 26.2285, 50.5860),
-    CountryPreset("Bangladesh", 23.8103, 90.4125),
-    CountryPreset("Belgium", 50.8503, 4.3517),
-    CountryPreset("Bosnia and Herzegovina", 43.8563, 18.4131),
-    CountryPreset("Brazil", -15.7975, -47.8919),
-    CountryPreset("Brunei", 4.9031, 114.9398),
-    CountryPreset("Canada", 45.4215, -75.6972),
-    CountryPreset("China", 39.9042, 116.4074),
-    CountryPreset("Cyprus", 35.1856, 33.3823),
-    CountryPreset("Denmark", 55.6761, 12.5683),
-    CountryPreset("Egypt", 30.0444, 31.2357),
-    CountryPreset("Finland", 60.1699, 24.9384),
-    CountryPreset("France", 48.8566, 2.3522),
-    CountryPreset("Germany", 52.5200, 13.4050),
-    CountryPreset("Ghana", 5.6037, -0.1870),
-    CountryPreset("Greece", 37.9838, 23.7275),
-    CountryPreset("Hong Kong", 22.3193, 114.1694),
-    CountryPreset("India", 28.6139, 77.2090),
-    CountryPreset("Indonesia", -6.2088, 106.8456),
-    CountryPreset("Iran", 35.6892, 51.3890),
-    CountryPreset("Iraq", 33.3152, 44.3661),
-    CountryPreset("Ireland", 53.3498, -6.2603),
-    CountryPreset("Italy", 41.9028, 12.4964),
-    CountryPreset("Japan", 35.6762, 139.6503),
-    CountryPreset("Jordan", 31.9454, 35.9284),
-    CountryPreset("Kazakhstan", 51.1694, 71.4491),
-    CountryPreset("Kenya", -1.2921, 36.8219),
-    CountryPreset("Kuwait", 29.3759, 47.9774),
-    CountryPreset("Kyrgyzstan", 42.8746, 74.5698),
-    CountryPreset("Lebanon", 33.8938, 35.5018),
-    CountryPreset("Libya", 32.8872, 13.1913),
-    CountryPreset("Malaysia", 3.1390, 101.6869),
-    CountryPreset("Maldives", 4.1755, 73.5093),
-    CountryPreset("Morocco", 34.0209, -6.8416),
-    CountryPreset("Myanmar", 19.7633, 96.0785),
-    CountryPreset("Nepal", 27.7172, 85.3240),
-    CountryPreset("Netherlands", 52.3676, 4.9041),
-    CountryPreset("New Zealand", -41.2865, 174.7762),
-    CountryPreset("Nigeria", 9.0765, 7.3986),
-    CountryPreset("Norway", 59.9139, 10.7522),
-    CountryPreset("Oman", 23.5859, 58.4059),
-    CountryPreset("Pakistan", 33.6844, 73.0479),
-    CountryPreset("Palestine", 31.7683, 35.2137),
-    CountryPreset("Philippines", 14.5995, 120.9842),
-    CountryPreset("Poland", 52.2297, 21.0122),
-    CountryPreset("Portugal", 38.7223, -9.1393),
-    CountryPreset("Qatar", 25.2854, 51.5310),
-    CountryPreset("Russia", 55.7558, 37.6173),
-    CountryPreset("Saudi Arabia", 24.7136, 46.6753),
-    CountryPreset("Singapore", 1.3521, 103.8198),
-    CountryPreset("South Africa", -25.7479, 28.2293),
-    CountryPreset("South Korea", 37.5665, 126.9780),
-    CountryPreset("Spain", 40.4168, -3.7038),
-    CountryPreset("Sri Lanka", 6.9271, 79.8612),
-    CountryPreset("Sudan", 15.5007, 32.5599),
-    CountryPreset("Sweden", 59.3293, 18.0686),
-    CountryPreset("Switzerland", 46.9480, 7.4474),
-    CountryPreset("Syria", 33.5138, 36.2765),
-    CountryPreset("Taiwan", 25.0330, 121.5654),
-    CountryPreset("Tajikistan", 38.5598, 68.7870),
-    CountryPreset("Thailand", 13.7563, 100.5018),
-    CountryPreset("Tunisia", 36.8065, 10.1815),
-    CountryPreset("Turkey", 39.9334, 32.8597),
-    CountryPreset("Turkmenistan", 37.9601, 58.3261),
-    CountryPreset("Uganda", 0.3476, 32.5825),
-    CountryPreset("United Arab Emirates", 24.4539, 54.3773),
-    CountryPreset("United Kingdom", 51.5074, -0.1278),
-    CountryPreset("United States", 38.9072, -77.0369),
-    CountryPreset("Uzbekistan", 41.2995, 69.2401),
-    CountryPreset("Yemen", 15.3694, 44.1910),
-  ];
+// 95+ Muslim-majority & global Muslim-populated regions with exact coordinates & IANA Timezones
+const List<RegionInfo> kGlobalRegions = [
+  // South Asia
+  RegionInfo('Bangladesh - Dhaka', 'Asia/Dhaka', 'UTC+6', 23.8103, 90.4125),
+  RegionInfo('Bangladesh - Chattogram', 'Asia/Dhaka', 'UTC+6', 22.3569, 91.7832),
+  RegionInfo('Bangladesh - Sylhet', 'Asia/Dhaka', 'UTC+6', 24.8949, 91.8687),
+  RegionInfo('Bangladesh - Rajshahi', 'Asia/Dhaka', 'UTC+6', 24.3745, 88.6042),
+  RegionInfo('Bangladesh - Khulna', 'Asia/Dhaka', 'UTC+6', 22.8456, 89.5403),
+  RegionInfo('Bangladesh - Barishal', 'Asia/Dhaka', 'UTC+6', 22.7010, 90.3535),
+  RegionInfo('Bangladesh - Rangpur', 'Asia/Dhaka', 'UTC+6', 25.7439, 89.2752),
+  RegionInfo('Bangladesh - Mymensingh', 'Asia/Dhaka', 'UTC+6', 24.7471, 90.4203),
+  RegionInfo('India - Kolkata (East)', 'Asia/Kolkata', 'UTC+5:30', 22.5726, 88.3639),
+  RegionInfo('India - New Delhi (North)', 'Asia/Kolkata', 'UTC+5:30', 28.6139, 77.2090),
+  RegionInfo('India - Mumbai (West)', 'Asia/Kolkata', 'UTC+5:30', 19.0760, 72.8777),
+  RegionInfo('India - Hyderabad (South)', 'Asia/Kolkata', 'UTC+5:30', 17.3850, 78.4867),
+  RegionInfo('Pakistan - Islamabad', 'Asia/Karachi', 'UTC+5', 33.6844, 73.0479),
+  RegionInfo('Pakistan - Karachi', 'Asia/Karachi', 'UTC+5', 24.8607, 67.0011),
+  RegionInfo('Pakistan - Lahore', 'Asia/Karachi', 'UTC+5', 31.5204, 74.3587),
+  RegionInfo('Maldives - Male', 'Indian/Maldives', 'UTC+5', 4.1755, 73.5093),
+  RegionInfo('Afghanistan - Kabul', 'Asia/Kabul', 'UTC+4:30', 34.5553, 69.2075),
+  RegionInfo('Sri Lanka - Colombo', 'Asia/Colombo', 'UTC+5:30', 6.9271, 79.8612),
+  RegionInfo('Nepal - Kathmandu', 'Asia/Kathmandu', 'UTC+5:45', 27.7172, 85.3240),
 
-  static Map<String, int> getTimes(DateTime date, {required double lat, required double lng, int offsetMin = 0}) {
-    int dayOfYear = int.parse("${date.difference(DateTime(date.year, 1, 1)).inDays + 1}");
-    double b = 2 * pi * (dayOfYear - 81) / 365.0;
-    
-    double eot = 9.87 * sin(2 * b) - 7.53 * cos(b) - 1.5 * sin(b);
-    double declination = 23.45 * sin(2 * pi * (284 + dayOfYear) / 365.0);
-    double declRad = declination * pi / 180.0;
-    double latRad = lat * pi / 180.0;
+  // Middle East (Including Holy Cities Makkah & Madinah)
+  RegionInfo('Saudi Arabia - Makkah', 'Asia/Riyadh', 'UTC+3', 21.4225, 39.8262),
+  RegionInfo('Saudi Arabia - Madinah', 'Asia/Riyadh', 'UTC+3', 24.4672, 39.6111),
+  RegionInfo('Saudi Arabia - Riyadh', 'Asia/Riyadh', 'UTC+3', 24.7136, 46.6753),
+  RegionInfo('Saudi Arabia - Jeddah', 'Asia/Riyadh', 'UTC+3', 21.4858, 39.1925),
+  RegionInfo('UAE - Dubai', 'Asia/Dubai', 'UTC+4', 25.2048, 55.2708),
+  RegionInfo('UAE - Abu Dhabi', 'Asia/Dubai', 'UTC+4', 24.4539, 54.3773),
+  RegionInfo('Qatar - Doha', 'Asia/Qatar', 'UTC+3', 25.2854, 51.5310),
+  RegionInfo('Kuwait - Kuwait City', 'Asia/Kuwait', 'UTC+3', 29.3759, 47.9774),
+  RegionInfo('Oman - Muscat', 'Asia/Muscat', 'UTC+4', 23.5880, 58.3829),
+  RegionInfo('Bahrain - Manama', 'Asia/Bahrain', 'UTC+3', 26.2285, 50.5860),
+  RegionInfo('Turkey - Istanbul', 'Europe/Istanbul', 'UTC+3', 41.0082, 28.9784),
+  RegionInfo('Turkey - Ankara', 'Europe/Istanbul', 'UTC+3', 39.9334, 32.8597),
+  RegionInfo('Palestine - Jerusalem (Al-Quds)', 'Asia/Jerusalem', 'UTC+2', 31.7683, 35.2137),
+  RegionInfo('Jordan - Amman', 'Asia/Amman', 'UTC+3', 31.9454, 35.9284),
+  RegionInfo('Lebanon - Beirut', 'Asia/Beirut', 'UTC+2', 33.8938, 35.5018),
+  RegionInfo('Iraq - Baghdad', 'Asia/Baghdad', 'UTC+3', 33.3152, 44.3661),
+  RegionInfo('Iran - Tehran', 'Asia/Tehran', 'UTC+3:30', 35.6892, 51.3890),
+  RegionInfo('Syria - Damascus', 'Asia/Damascus', 'UTC+3', 33.5138, 36.2765),
+  RegionInfo('Yemen - Sanaa', 'Asia/Aden', 'UTC+3', 15.3694, 44.1910),
 
-    double tzOffsetHours = date.timeZoneOffset.inMinutes / 60.0;
-    double solarNoonMin = 720.0 - (lng * 4.0) - eot + (tzOffsetHours * 60.0);
+  // Southeast & East Asia
+  RegionInfo('Indonesia - Jakarta', 'Asia/Jakarta', 'UTC+7', -6.2088, 106.8456),
+  RegionInfo('Indonesia - Makassar', 'Asia/Makassar', 'UTC+8', -5.1477, 119.4327),
+  RegionInfo('Malaysia - Kuala Lumpur', 'Asia/Kuala_Lumpur', 'UTC+8', 3.1390, 101.6869),
+  RegionInfo('Brunei - Bandar Seri Begawan', 'Asia/Brunei', 'UTC+8', 4.9031, 114.9398),
+  RegionInfo('Singapore', 'Asia/Singapore', 'UTC+8', 1.3521, 103.8198),
+  RegionInfo('China - Beijing / Shanghai', 'Asia/Shanghai', 'UTC+8', 31.2304, 121.4737),
+  RegionInfo('China - Guangzhou', 'Asia/Shanghai', 'UTC+8', 23.1291, 113.2644),
+  RegionInfo('China - Urumqi (Xinjiang)', 'Asia/Urumqi', 'UTC+6', 43.8256, 87.6168),
+  RegionInfo('Japan - Tokyo', 'Asia/Tokyo', 'UTC+9', 35.6762, 139.6503),
+  RegionInfo('South Korea - Seoul', 'Asia/Seoul', 'UTC+9', 37.5665, 126.9780),
+  RegionInfo('Thailand - Bangkok', 'Asia/Bangkok', 'UTC+7', 13.7563, 100.5018),
+  RegionInfo('Philippines - Manila', 'Asia/Manila', 'UTC+8', 14.5995, 120.9842),
+  RegionInfo('Myanmar - Yangon', 'Asia/Yangon', 'UTC+6:30', 16.8409, 96.1735),
+  RegionInfo('Hong Kong', 'Asia/Hong_Kong', 'UTC+8', 22.3193, 114.1694),
+  RegionInfo('Taiwan - Taipei', 'Asia/Taipei', 'UTC+8', 25.0330, 121.5654),
 
-    double cosHa = (sin(-0.833 * pi / 180.0) - sin(latRad) * sin(declRad)) / (cos(latRad) * cos(declRad));
-    cosHa = cosHa.clamp(-1.0, 1.0);
-    double haMin = acos(cosHa) * 180.0 / pi * 4.0;
+  // Central Asia
+  RegionInfo('Uzbekistan - Tashkent', 'Asia/Tashkent', 'UTC+5', 41.2995, 69.2401),
+  RegionInfo('Kazakhstan - Astana', 'Asia/Almaty', 'UTC+5', 51.1694, 71.4491),
+  RegionInfo('Kazakhstan - Almaty', 'Asia/Almaty', 'UTC+5', 43.2220, 76.8512),
+  RegionInfo('Kyrgyzstan - Bishkek', 'Asia/Bishkek', 'UTC+6', 42.8746, 74.5698),
+  RegionInfo('Tajikistan - Dushanbe', 'Asia/Dushanbe', 'UTC+5', 38.5598, 68.7870),
+  RegionInfo('Turkmenistan - Ashgabat', 'Asia/Ashgabat', 'UTC+5', 37.9601, 58.3261),
+  RegionInfo('Azerbaijan - Baku', 'Asia/Baku', 'UTC+4', 40.4093, 49.8671),
 
-    double cosFajr = (sin(-18.0 * pi / 180.0) - sin(latRad) * sin(declRad)) / (cos(latRad) * cos(declRad));
-    cosFajr = cosFajr.clamp(-1.0, 1.0);
-    double fajrMin = acos(cosFajr) * 180.0 / pi * 4.0;
+  // Europe
+  RegionInfo('United Kingdom - London', 'Europe/London', 'UTC+0', 51.5074, -0.1278),
+  RegionInfo('United Kingdom - Birmingham', 'Europe/London', 'UTC+0', 52.4862, -1.8904),
+  RegionInfo('Germany - Berlin', 'Europe/Berlin', 'UTC+1', 52.5200, 13.4050),
+  RegionInfo('Germany - Frankfurt', 'Europe/Berlin', 'UTC+1', 50.1109, 8.6821),
+  RegionInfo('France - Paris', 'Europe/Paris', 'UTC+1', 48.8566, 2.3522),
+  RegionInfo('Italy - Rome', 'Europe/Rome', 'UTC+1', 41.9028, 12.4964),
+  RegionInfo('Spain - Madrid', 'Europe/Madrid', 'UTC+1', 40.4168, -3.7038),
+  RegionInfo('Netherlands - Amsterdam', 'Europe/Amsterdam', 'UTC+1', 52.3676, 4.9041),
+  RegionInfo('Belgium - Brussels', 'Europe/Brussels', 'UTC+1', 50.8503, 4.3517),
+  RegionInfo('Sweden - Stockholm', 'Europe/Stockholm', 'UTC+1', 59.3293, 18.0686),
+  RegionInfo('Norway - Oslo', 'Europe/Oslo', 'UTC+1', 59.9139, 10.7522),
+  RegionInfo('Denmark - Copenhagen', 'Europe/Copenhagen', 'UTC+1', 55.6761, 12.5683),
+  RegionInfo('Switzerland - Zurich', 'Europe/Zurich', 'UTC+1', 47.3769, 8.5417),
+  RegionInfo('Austria - Vienna', 'Europe/Vienna', 'UTC+1', 48.2082, 16.3738),
+  RegionInfo('Ireland - Dublin', 'Europe/Dublin', 'UTC+0', 53.3498, -6.2603),
+  RegionInfo('Bosnia & Herzegovina - Sarajevo', 'Europe/Sarajevo', 'UTC+1', 43.8563, 18.4131),
+  RegionInfo('Albania - Tirana', 'Europe/Tirane', 'UTC+1', 41.3275, 19.8187),
+  RegionInfo('Kosovo - Pristina', 'Europe/Belgrade', 'UTC+1', 42.6629, 21.1655),
+  RegionInfo('Russia - Moscow', 'Europe/Moscow', 'UTC+3', 55.7558, 37.6173),
+  RegionInfo('Greece - Athens', 'Europe/Athens', 'UTC+2', 37.9838, 23.7275),
+  RegionInfo('Portugal - Lisbon', 'Europe/Lisbon', 'UTC+0', 38.7223, -9.1393),
 
-    int sunrise = (solarNoonMin - haMin).round() + offsetMin;
-    int sunset = (solarNoonMin + haMin).round() + offsetMin;
-    int noon = solarNoonMin.round() + offsetMin;
-    int fajr = (solarNoonMin - fajrMin).round() + offsetMin;
-    int sehriEnd = fajr - 3;
-    int iftar = sunset + 1;
+  // Africa
+  RegionInfo('Egypt - Cairo', 'Africa/Cairo', 'UTC+2', 30.0444, 31.2357),
+  RegionInfo('Morocco - Casablanca', 'Africa/Casablanca', 'UTC+1', 33.5731, -7.5898),
+  RegionInfo('Algeria - Algiers', 'Africa/Algiers', 'UTC+1', 36.7538, 3.0588),
+  RegionInfo('Tunisia - Tunis', 'Africa/Tunis', 'UTC+1', 36.8065, 10.1815),
+  RegionInfo('Libya - Tripoli', 'Africa/Tripoli', 'UTC+2', 32.8872, 13.1913),
+  RegionInfo('Sudan - Khartoum', 'Africa/Khartoum', 'UTC+2', 15.5007, 32.5599),
+  RegionInfo('Nigeria - Abuja', 'Africa/Lagos', 'UTC+1', 9.0765, 7.3986),
+  RegionInfo('Nigeria - Lagos', 'Africa/Lagos', 'UTC+1', 6.5244, 3.3792),
+  RegionInfo('South Africa - Johannesburg', 'Africa/Johannesburg', 'UTC+2', -26.2041, 28.0473),
+  RegionInfo('South Africa - Cape Town', 'Africa/Johannesburg', 'UTC+2', -33.9249, 18.4241),
+  RegionInfo('Kenya - Nairobi', 'Africa/Nairobi', 'UTC+3', -1.2921, 36.8219),
+  RegionInfo('Somalia - Mogadishu', 'Africa/Mogadishu', 'UTC+3', 2.0469, 45.3182),
+  RegionInfo('Ethiopia - Addis Ababa', 'Africa/Addis_Ababa', 'UTC+3', 9.0320, 38.7469),
+  RegionInfo('Senegal - Dakar', 'Africa/Dakar', 'UTC+0', 14.7167, -17.4677),
 
-    return {
-      'sehriEnd': sehriEnd,
-      'sunrise': sunrise,
-      'noon': noon,
-      'sunset': sunset,
-      'iftar': iftar,
-    };
-  }
+  // Americas & Oceania
+  RegionInfo('USA - New York (EST)', 'America/New_York', 'UTC-5', 40.7128, -74.0060),
+  RegionInfo('USA - Chicago (CST)', 'America/Chicago', 'UTC-6', 41.8781, -87.6298),
+  RegionInfo('USA - Houston (CST)', 'America/Chicago', 'UTC-6', 29.7604, -95.3698),
+  RegionInfo('USA - Los Angeles (PST)', 'America/Los_Angeles', 'UTC-8', 34.0522, -118.2437),
+  RegionInfo('Canada - Toronto', 'America/Toronto', 'UTC-5', 43.6532, -79.3832),
+  RegionInfo('Canada - Vancouver', 'America/Vancouver', 'UTC-8', 49.2827, -123.1207),
+  RegionInfo('Brazil - Sao Paulo', 'America/Sao_Paulo', 'UTC-3', -23.5505, -46.6333),
+  RegionInfo('Australia - Sydney', 'Australia/Sydney', 'UTC+10', -33.8688, 151.2093),
+  RegionInfo('Australia - Melbourne', 'Australia/Melbourne', 'UTC+10', -37.8136, 144.9631),
+  RegionInfo('Australia - Perth', 'Australia/Perth', 'UTC+8', -31.9505, 115.8605),
+  RegionInfo('New Zealand - Auckland', 'Pacific/Auckland', 'UTC+12', -36.8485, 174.7633),
+];
 
-  static String formatMin(int totalMinutes) {
-    int m = (totalMinutes % 1440 + 1440) % 1440;
-    int h = m ~/ 60;
-    int min = m % 60;
-    String period = h >= 12 ? 'PM' : 'AM';
-    int displayH = h % 12 == 0 ? 12 : h % 12;
-    return "$displayH:${min.toString().padLeft(2, '0')} $period";
-  }
+// ============================================================================
+// 2. OFFLINE SOLAR & TIMING ENGINE (WITH 3-MIN SEHRI-FAJR GAP & 30-MIN IFTAR)
+// ============================================================================
 
-  static Map<String, dynamic> evaluateStatus(DateTime now, {required double lat, required double lng, int offsetMin = 0}) {
-    final times = getTimes(now, lat: lat, lng: lng, offsetMin: offsetMin);
-    int cur = now.hour * 60 + now.minute;
+class DailySolarTimes {
+  final int sehriEndMin; // Imsak / Sehri ends (3 mins before Fajr)
+  final int fajrStartMin; // Fajr begins
+  final int sunriseMin; // Sunrise begins (Forbidden 15m)
+  final int zawwalStartMin; // Solar Noon - 8m (Forbidden 16m)
+  final int solarNoonMin; // Dhuhr / Midday
+  final int sunsetMin; // Sunset / Maghrib / Iftar begins (Forbidden 15m before sunset)
 
-    int sehriEnd = times['sehriEnd']!;
-    int sunrise = times['sunrise']!;
-    int noon = times['noon']!;
-    int sunset = times['sunset']!;
-    int iftar = times['iftar']!;
-
-    if (cur >= sunrise && cur < sunrise + 18) {
-      return {
-        'statusType': 2,
-        'icon': '⛔',
-        'title': 'Sunrise (No Salah)',
-        'isForbidden': true,
-      };
-    }
-    if (cur >= noon - 12 && cur < noon) {
-      return {
-        'statusType': 2,
-        'icon': '⛔',
-        'title': 'Zawwal (No Salah)',
-        'isForbidden': true,
-      };
-    }
-    if (cur >= sunset - 15 && cur < sunset) {
-      return {
-        'statusType': 2,
-        'icon': '⛔',
-        'title': 'Sunset (No Salah)',
-        'isForbidden': true,
-      };
-    }
-
-    if (cur >= iftar && cur < iftar + 35) {
-      return {
-        'statusType': 1,
-        'icon': '🍽️',
-        'title': 'Iftar Now (${formatMin(iftar)})',
-        'isForbidden': false,
-      };
-    }
-
-    if (cur >= sehriEnd - 60 && cur <= sehriEnd) {
-      int left = sehriEnd - cur;
-      return {
-        'statusType': 1,
-        'icon': '🥣',
-        'title': left <= 20 ? 'Sehri: ${left}m left' : 'Sehri Ends ${formatMin(sehriEnd)}',
-        'isForbidden': false,
-      };
-    }
-
-    if (cur >= noon + 240 && cur < sunset - 15) {
-      return {
-        'statusType': 0,
-        'icon': '🌇',
-        'title': 'Iftar: ${formatMin(iftar)}',
-        'isForbidden': false,
-      };
-    }
-
-    bool isNight = cur < sunrise || cur >= sunset;
-    return {
-      'statusType': 0,
-      'icon': isNight ? '🌙' : '☀️',
-      'title': 'Salah Open',
-      'isForbidden': false,
-    };
-  }
+  const DailySolarTimes({
+    required this.sehriEndMin,
+    required this.fajrStartMin,
+    required this.sunriseMin,
+    required this.zawwalStartMin,
+    required this.solarNoonMin,
+    required this.sunsetMin,
+  });
 }
 
-class HijriCalculator {
-  static const List<String> hijriMonths = [
-    "Muharram", "Safar", "Rabi' al-Awwal", "Rabi' al-Thani",
-    "Jumada al-Awwal", "Jumada al-Thani", "Rajab", "Sha'ban",
-    "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
-  ];
+class LiveTimingStatus {
+  final String icon;
+  final String label;
+  final String colorHex;
+  final bool isForbidden;
+  final String dayPhase; // 'sunrise', 'midday', 'sunset', 'night'
+  final String hijriFormatted;
+  final String gregFormatted;
 
-  static Map<String, dynamic> calculate(DateTime date, int offsetDays, {int sunsetMin = 1095}) {
-    int curMin = date.hour * 60 + date.minute;
-    bool isAfterMaghrib = curMin >= sunsetMin;
-
-    DateTime adjusted = date.add(Duration(days: offsetDays + (isAfterMaghrib ? 1 : 0)));
-
-    int day = adjusted.day;
-    int month = adjusted.month;
-    int year = adjusted.year;
-
-    int m = month;
-    int y = year;
-    if (m < 3) {
-      y -= 1;
-      m += 12;
-    }
-
-    int a = (y / 100).floor();
-    int b = 2 - a + (a / 4).floor();
-    int jd = (365.25 * (y + 4716)).floor() + (30.6001 * (m + 1)).floor() + day + b - 1524;
-
-    int l = jd - 1948440 + 10632;
-    int n = ((l - 1) / 10631).floor();
-    l = l - 10631 * n + 354;
-    int j = ((10985 - l) / 5316).floor() * ((50 * l) / 17719).floor() +
-        (l / 5670).floor() * ((43 * l) / 15238).floor();
-    l = l - ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
-        (j / 16).floor() * ((15238 * j) / 43).floor() + 29;
-    int hMonth = ((24 * l) / 709).floor();
-    int hDay = l - ((709 * hMonth) / 24).floor();
-    int hYear = 30 * n + j - 30;
-
-    String monthName = (hMonth >= 1 && hMonth <= 12) ? hijriMonths[hMonth - 1] : "Hijri";
-
-    return {
-      'day': hDay,
-      'month': monthName,
-      'year': hYear,
-      'formatted': "$hDay $monthName $hYear AH"
-    };
-  }
+  const LiveTimingStatus({
+    required this.icon,
+    required this.label,
+    required this.colorHex,
+    required this.isForbidden,
+    required this.dayPhase,
+    required this.hijriFormatted,
+    required this.gregFormatted,
+  });
 }
 
-class TasbihApp extends StatelessWidget {
-  const TasbihApp({super.key});
+class SolarEngine {
+  static tz.TZDateTime nowInRegion(RegionInfo region) {
+    try {
+      final location = tz.getLocation(region.timezone);
+      return tz.TZDateTime.now(location);
+    } catch (_) {
+      final now = DateTime.now();
+      return tz.TZDateTime.from(now, tz.local);
+    }
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tasbih',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF161719),
-        primaryColor: const Color(0xFF00B074),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00B074),
-          surface: Color(0xFF222428),
-        ),
-      ),
-      home: const TasbihHomeScreen(),
+  static DailySolarTimes calculate(
+    DateTime localDate,
+    RegionInfo region,
+    int manualOffsetMinutes,
+  ) {
+    // Get actual timezone offset in hours on that specific date (handles DST automatically)
+    double tzOffsetHours = 6.0;
+    try {
+      final loc = tz.getLocation(region.timezone);
+      final tzDate = tz.TZDateTime(loc, localDate.year, localDate.month, localDate.day, 12, 0);
+      tzOffsetHours = tzDate.timeZoneOffset.inMinutes / 60.0;
+    } catch (_) {
+      tzOffsetHours = DateTime.now().timeZoneOffset.inMinutes / 60.0;
+    }
+
+    final int dayOfYear = int.parse(DateFormat('D').format(localDate));
+    final double gamma = (2.0 * math.pi / 365.0) * (dayOfYear - 1);
+
+    // Equation of time (minutes)
+    final double eqTime = 229.18 *
+        (0.000075 +
+            0.001868 * math.cos(gamma) -
+            0.032077 * math.sin(gamma) -
+            0.014615 * math.cos(2 * gamma) -
+            0.040849 * math.sin(2 * gamma));
+
+    // Solar declination (radians)
+    final double decl = 0.006918 -
+        0.399912 * math.cos(gamma) +
+        0.070257 * math.sin(gamma) -
+        0.006758 * math.cos(2 * gamma) +
+        0.000907 * math.sin(2 * gamma) -
+        0.002697 * math.cos(3 * gamma) +
+        0.00148 * math.sin(3 * gamma);
+
+    final double latRad = region.lat * math.pi / 180.0;
+
+    // Solar Noon in minutes from midnight
+    final double noonMinutes = 720.0 - 4.0 * region.lng - eqTime + (tzOffsetHours * 60.0);
+
+    double hourAngleForZenith(double zenithDeg) {
+      final double zenithRad = zenithDeg * math.pi / 180.0;
+      double cosH = (math.cos(zenithRad) - math.sin(latRad) * math.sin(decl)) /
+          (math.cos(latRad) * math.cos(decl));
+      cosH = cosH.clamp(-0.999, 0.999);
+      return math.acos(cosH) * 180.0 / math.pi;
+    }
+
+    // Standard Sunrise/Sunset zenith = 90.833°, Fajr (Muslim World League / Karachi 18°) = 108.0°
+    final double haSunrise = hourAngleForZenith(90.833);
+    final double haFajr = hourAngleForZenith(108.0);
+
+    final int sunrise = (noonMinutes - 4.0 * haSunrise).round() + manualOffsetMinutes;
+    final int sunset = (noonMinutes + 4.0 * haSunrise).round() + manualOffsetMinutes;
+    final int fajrStart = (noonMinutes - 4.0 * haFajr).round() + manualOffsetMinutes;
+    // Precautionary 3-minute gap between Sehri End (Imsak) and Fajr Azan/Start
+    final int sehriEnd = fajrStart - 3;
+    final int noon = noonMinutes.round() + manualOffsetMinutes;
+    final int zawwalStart = noon - 8;
+
+    return DailySolarTimes(
+      sehriEndMin: sehriEnd,
+      fajrStartMin: fajrStart,
+      sunriseMin: sunrise,
+      zawwalStartMin: zawwalStart,
+      solarNoonMin: noon,
+      sunsetMin: sunset,
+    );
+  }
+
+  static String formatMinutes12h(int totalMinutes) {
+    int normalized = totalMinutes % 1440;
+    if (normalized < 0) normalized += 1440;
+    final int h24 = normalized ~/ 60;
+    final int m = normalized % 60;
+    final String period = h24 >= 12 ? 'PM' : 'AM';
+    int h12 = h24 % 12;
+    if (h12 == 0) h12 = 12;
+    return '${h12.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} $period';
+  }
+
+  static LiveTimingStatus getLiveStatus({
+    required RegionInfo region,
+    required int manualOffsetMinutes,
+    required int hijriDayAdjustment,
+  }) {
+    final now = nowInRegion(region);
+    final int currentMin = now.hour * 60 + now.minute;
+    final times = calculate(now, region, manualOffsetMinutes);
+
+    // 1. Hijri Date (Advances automatically after Sunset/Maghrib)
+    DateTime hijriBaseDate = DateTime(now.year, now.month, now.day);
+    if (currentMin >= times.sunsetMin) {
+      hijriBaseDate = hijriBaseDate.add(const Duration(days: 1));
+    }
+    hijriBaseDate = hijriBaseDate.add(Duration(days: hijriDayAdjustment));
+    final hijri = HijriCalendar.fromDate(hijriBaseDate);
+    final String hijriStr = '${hijri.hDay} ${hijri.longMonthName} ${hijri.hYear}';
+    final String gregStr = DateFormat('EEE, d MMM').format(now);
+
+    // 2. Determine Day Phase for 4-State Widget Gradient (sunrise, midday, sunset, night)
+    String phase = 'night';
+    if (currentMin >= times.fajrStartMin && currentMin < times.sunriseMin + 150) {
+      phase = 'sunrise';
+    } else if (currentMin >= times.sunriseMin + 150 && currentMin < times.sunsetMin - 60) {
+      phase = 'midday';
+    } else if (currentMin >= times.sunsetMin - 60 && currentMin < times.sunsetMin + 45) {
+      phase = 'sunset';
+    } else {
+      phase = 'night';
+    }
+
+    // 3. Evaluate Priority Status (Forbidden -> 3-Min Sehri Gap -> Sehri Countdown -> 30-Min Iftar -> Salah Open)
+    // A. Forbidden Time 1: Sunrise (Sunrise to Sunrise + 15m)
+    if (currentMin >= times.sunriseMin && currentMin < times.sunriseMin + 15) {
+      return LiveTimingStatus(
+        icon: '⛔',
+        label: 'Sunrise (No Salah)',
+        colorHex: '#FB7185',
+        isForbidden: true,
+        dayPhase: 'sunrise',
+        hijriFormatted: hijriStr,
+        gregFormatted: gregStr,
+      );
+    }
+
+    // B. Forbidden Time 2: Zawwal / Solar Noon (Noon - 8m to Noon + 8m)
+    if (currentMin >= times.zawwalStartMin && currentMin < times.solarNoonMin + 8) {
+      return LiveTimingStatus(
+        icon: '⛔',
+        label: 'Zawwal (No Salah)',
+        colorHex: '#FB7185',
+        isForbidden: true,
+        dayPhase: 'midday',
+        hijriFormatted: hijriStr,
+        gregFormatted: gregStr,
+      );
+    }
+
+    // C. Forbidden Time 3: Sunset (Sunset - 15m to Sunset)
+    if (currentMin >= times.sunsetMin - 15 && currentMin < times.sunsetMin) {
+      return LiveTimingStatus(
+        icon: '⛔',
+        label: 'Sunset (No Salah)',
+        colorHex: '#FB7185',
+        isForbidden: true,
+        dayPhase: 'sunset',
+        hijriFormatted: hijriStr,
+        gregFormatted: gregStr,
+      );
+    }
+
+    // D. Precautionary 3-Minute Gap between Sehri End & Fajr Start
+    if (currentMin >= times.sehriEndMin && currentMin < times.fajrStartMin) {
+      final int rem = times.fajrStartMin - currentMin;
+      return LiveTimingStatus(
+        icon: '⏳',
+        label: 'Fajr in ${rem}m (Pause)',
+        colorHex: '#FBBF24',
+        isForbidden: false,
+        dayPhase: 'sunrise',
+        hijriFormatted: hijriStr,
+        gregFormatted: gregStr,
+      );
+    }
+
+    // E. Sehri Ending Window (30 minutes before Sehri End)
+    if (currentMin >= times.sehriEndMin - 30 && currentMin < times.sehriEndMin) {
+      final int rem = times.sehriEndMin - currentMin;
+      return LiveTimingStatus(
+        icon: '🥣',
+        label: 'Sehri: ${rem}m left',
+        colorHex: '#38BDF8',
+        isForbidden: false,
+        dayPhase: 'night',
+        hijriFormatted: hijriStr,
+        gregFormatted: gregStr,
+      );
+    }
+
+    // F. Iftar Window (30 minutes after Sunset/Maghrib begins)
+    if (currentMin >= times.sunsetMin && currentMin < times.sunsetMin + 30) {
+      return LiveTimingStatus(
+        icon: '🍽️',
+        label: 'Iftar Now (${formatMinutes12h(times.sunsetMin)})',
+        colorHex: '#34D399',
+        isForbidden: false,
+        dayPhase: 'sunset',
+        hijriFormatted: hijriStr,
+        gregFormatted: gregStr,
+      );
+    }
+
+    // G. Normal Open Salah Status with Phase Icon
+    final String openIcon = phase == 'sunrise'
+        ? '🌅'
+        : phase == 'midday'
+            ? '☀️'
+            : phase == 'sunset'
+                ? '🌇'
+                : '🌙';
+
+    return LiveTimingStatus(
+      icon: openIcon,
+      label: 'Salah Open',
+      colorHex: '#F8FAFC',
+      isForbidden: false,
+      dayPhase: phase,
+      hijriFormatted: hijriStr,
+      gregFormatted: gregStr,
     );
   }
 }
 
-class TasbihHomeScreen extends StatefulWidget {
-  const TasbihHomeScreen({super.key});
+// ============================================================================
+// 3. TIMEZONE-AWARE NOTIFICATION SERVICE (4 TOGGLEABLE SWITCHES)
+// ============================================================================
 
-  @override
-  State<TasbihHomeScreen> createState() => _TasbihHomeScreenState();
+class NotificationService {
+  NotificationService._();
+  static final NotificationService instance = NotificationService._();
+
+  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  bool _initialized = false;
+
+  Future<void> init() async {
+    if (_initialized) return;
+    try {
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initSettings = InitializationSettings(android: androidSettings);
+      await _plugin.initialize(initSettings);
+
+      final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await androidImpl?.requestNotificationsPermission();
+      await androidImpl?.requestExactAlarmsPermission();
+      _initialized = true;
+    } catch (_) {}
+  }
+
+  Future<void> rescheduleAll({
+    required RegionInfo region,
+    required int manualOffsetMinutes,
+    required bool notifSehriStart,
+    required bool notifSehriEnd,
+    required bool notifIftar,
+    required bool notifForbidden,
+  }) async {
+    try {
+      await init();
+      await _plugin.cancelAll();
+
+      if (!notifSehriStart && !notifSehriEnd && !notifIftar && !notifForbidden) {
+        return;
+      }
+
+      tz.Location location;
+      try {
+        location = tz.getLocation(region.timezone);
+      } catch (_) {
+        location = tz.local;
+      }
+
+      final now = tz.TZDateTime.now(location);
+      int idCounter = 100;
+
+      // Schedule for Today (dayOffset = 0) and Tomorrow (dayOffset = 1)
+      for (int dayOffset = 0; dayOffset <= 1; dayOffset++) {
+        final targetDate = now.add(Duration(days: dayOffset));
+        final solar = SolarEngine.calculate(targetDate, region, manualOffsetMinutes);
+
+        Future<void> scheduleAtMinute(int minuteOfDay, String title, String body) async {
+          final int h = (minuteOfDay ~/ 60).clamp(0, 23);
+          final int m = (minuteOfDay % 60).clamp(0, 59);
+          final scheduled = tz.TZDateTime(
+            location,
+            targetDate.year,
+            targetDate.month,
+            targetDate.day,
+            h,
+            m,
+          );
+
+          if (scheduled.isAfter(now)) {
+            const androidDetails = AndroidNotificationDetails(
+              'tasbih_solar_alerts',
+              'Solar & Fasting Reminders',
+              channelDescription: 'Notifications for Sehri, Iftar, and Forbidden Salah times',
+              importance: Importance.high,
+              priority: Priority.high,
+            );
+            await _plugin.zonedSchedule(
+              idCounter++,
+              title,
+              body,
+              scheduled,
+              const NotificationDetails(android: androidDetails),
+              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+            );
+          }
+        }
+
+        // 1. Sehri Start (60 mins before Sehri End)
+        if (notifSehriStart) {
+          await scheduleAtMinute(
+            solar.sehriEndMin - 60,
+            '🥣 Sehri Time Started',
+            'Sehri ends at ${SolarEngine.formatMinutes12h(solar.sehriEndMin)} (${region.name})',
+          );
+        }
+
+        // 2. Sehri Ending Warning (20 mins before Sehri End)
+        if (notifSehriEnd) {
+          await scheduleAtMinute(
+            solar.sehriEndMin - 20,
+            '⏳ 20 Minutes Left for Sehri',
+            'Finish eating before ${SolarEngine.formatMinutes12h(solar.sehriEndMin)}. Fajr begins 3 mins later.',
+          );
+        }
+
+        // 3. Iftar / Maghrib Notification
+        if (notifIftar) {
+          await scheduleAtMinute(
+            solar.sunsetMin,
+            '🍽️ Iftar Time Now',
+            'Sunset reached at ${SolarEngine.formatMinutes12h(solar.sunsetMin)} (${region.name})',
+          );
+        }
+
+        // 4. Three Forbidden Salah Windows (Sunrise, Zawwal, Sunset)
+        if (notifForbidden) {
+          await scheduleAtMinute(
+            solar.sunriseMin,
+            '⛔ Forbidden Time: Sunrise',
+            'Avoid voluntary Salah for 15 minutes during sunrise.',
+          );
+          await scheduleAtMinute(
+            solar.zawwalStartMin,
+            '⛔ Forbidden Time: Zawwal (Midday)',
+            'Solar zenith window (~16 mins). Avoid Salah until Dhuhr begins.',
+          );
+          await scheduleAtMinute(
+            solar.sunsetMin - 15,
+            '⛔ Forbidden Time: Sunset',
+            'Avoid Salah during the last 15 minutes before sunset.',
+          );
+        }
+      }
+    } catch (_) {}
+  }
 }
 
-class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBindingObserver {
+// ============================================================================
+// 4. HOME WIDGET SYNC HELPER (4x1 ULTRA-SLIM CAPSULE)
+// ============================================================================
+
+class WidgetSyncService {
+  static Future<void> sync({
+    required int todayCount,
+    required LiveTimingStatus status,
+  }) async {
+    try {
+      await HomeWidget.saveWidgetData<String>('today_text', '📿 Today: $todayCount');
+      await HomeWidget.saveWidgetData<String>(
+          'status_text', '${status.icon} ${status.label}');
+      await HomeWidget.saveWidgetData<String>('status_color', status.colorHex);
+      await HomeWidget.saveWidgetData<String>('hijri_text', status.hijriFormatted);
+      await HomeWidget.saveWidgetData<String>('greg_text', status.gregFormatted);
+      await HomeWidget.saveWidgetData<String>('day_phase', status.dayPhase);
+
+      await HomeWidget.updateWidget(
+        name: 'TasbihWidgetProvider',
+        qualifiedAndroidName: 'com.ahm.tasbih.TasbihWidgetProvider',
+      );
+    } catch (_) {}
+  }
+}
+
+// ============================================================================
+// 5. MAIN APPLICATION & THEME ENGINE (DARK / LIGHT PORCELAIN / AMOLED)
+// ============================================================================
+
+enum AppThemeMode { dark, light, amoled }
+
+class TasbihApp extends StatefulWidget {
+  const TasbihApp({super.key});
+
+  @override
+  State<TasbihApp> createState() => _TasbihAppState();
+}
+
+class _TasbihAppState extends State<TasbihApp> with WidgetsBindingObserver {
+  // Core State
   List<DhikrItem> _dhikrList = [];
-  int _currentIndex = 0;
-  int _currentCount = 0;
+  int _selectedDhikrIndex = 0;
+  int _sessionCount = 0;
+  int _todayCount = 0;
+  int _lifetimeCount = 0;
+  Map<String, int> _weeklyHistory = {};
 
+  // Preferences
+  AppThemeMode _themeMode = AppThemeMode.dark;
   double _fontScale = 1.0;
-  int _hijriOffset = 0;
+  int _regionIndex = 0; // Default: Bangladesh - Dhaka
+  int _manualTimeOffset = 0; // -30 to +30 mins
+  int _hijriDayOffset = 0; // -2 to +2 days
 
-  String _countryName = "Bangladesh";
-  double _userLat = 23.8103;
-  double _userLng = 90.4125;
-  int _districtOffsetMin = 0;
-
-  Map<String, int> _dailyHistory = {};
-
-  bool _notifSehriStart = true;
-  bool _notifSehriAlert = true;
-  bool _notifIftar = true;
+  // 4 Notification Toggles
+  bool _notifSehriStart = false;
+  bool _notifSehriEnd = false;
+  bool _notifIftar = false;
   bool _notifForbidden = true;
+
+  Timer? _clockTimer;
+  late LiveTimingStatus _liveStatus;
+
+  static const List<DhikrItem> _defaultDhikrs = [
+    DhikrItem(
+      id: '1',
+      title: 'SubhanAllah',
+      arabic: 'سُبْحَانَ اللَّهِ',
+      meaning: 'Glory be to Allah',
+      target: 33,
+    ),
+    DhikrItem(
+      id: '2',
+      title: 'Alhamdulillah',
+      arabic: 'ٱلْحَمْدُ لِلَّٰهِ',
+      meaning: 'Praise be to Allah',
+      target: 33,
+    ),
+    DhikrItem(
+      id: '3',
+      title: 'Allahu Akbar',
+      arabic: 'اللَّهُ أَكْبَرُ',
+      meaning: 'Allah is the Greatest',
+      target: 34,
+    ),
+    DhikrItem(
+      id: '4',
+      title: 'Astaghfirullah',
+      arabic: 'أَسْتَغْفِرُ اللَّهَ',
+      meaning: 'I seek forgiveness from Allah',
+      target: 100,
+    ),
+    DhikrItem(
+      id: '5',
+      title: 'La ilaha illallah',
+      arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ',
+      meaning: 'There is no deity worthy of worship except Allah',
+      target: 100,
+    ),
+    DhikrItem(
+      id: '6',
+      title: 'SubhanAllahi wa bihamdihi',
+      arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+      meaning: 'Glory and praise be to Allah',
+      target: 100,
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadAllData().then((_) {
-      _checkTimeNoticePrompt();
+    _dhikrList = List.from(_defaultDhikrs);
+    _liveStatus = SolarEngine.getLiveStatus(
+      region: kGlobalRegions[_regionIndex],
+      manualOffsetMinutes: _manualTimeOffset,
+      hijriDayAdjustment: _hijriDayOffset,
+    );
+    _loadData();
+
+    // Update solar status & widget every 30 seconds
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _refreshLiveStatusAndWidget();
     });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _clockTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
-      _saveAllData();
+    if (state == AppLifecycleState.resumed) {
+      _refreshLiveStatusAndWidget();
     }
   }
 
-  String _getTodayKey() {
-    final now = DateTime.now();
-    return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+  String _todayKey() => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Load Dhikr List
+    final rawList = prefs.getString('dhikr_list');
+    if (rawList != null) {
+      try {
+        final decoded = jsonDecode(rawList) as List;
+        if (decoded.isNotEmpty) {
+          _dhikrList = decoded.map((e) => DhikrItem.fromJson(e)).toList();
+        }
+      } catch (_) {}
+    }
+
+    _selectedDhikrIndex =
+        (prefs.getInt('selected_dhikr_index') ?? 0).clamp(0, _dhikrList.length - 1);
+    _sessionCount = prefs.getInt('session_count') ?? 0;
+    _lifetimeCount = prefs.getInt('lifetime_count') ?? 0;
+
+    // Weekly history & daily rollover
+    final rawHistory = prefs.getString('weekly_history');
+    if (rawHistory != null) {
+      try {
+        final Map<String, dynamic> map = jsonDecode(rawHistory);
+        _weeklyHistory = map.map((k, v) => MapEntry(k, (v as num).toInt()));
+      } catch (_) {}
+    }
+    _todayCount = _weeklyHistory[_todayKey()] ?? 0;
+
+    // Preferences
+    final themeIdx = prefs.getInt('theme_mode') ?? 0;
+    _themeMode = AppThemeMode.values[themeIdx.clamp(0, AppThemeMode.values.length - 1)];
+    _fontScale = prefs.getDouble('font_scale') ?? 1.0;
+    _regionIndex =
+        (prefs.getInt('region_index') ?? 0).clamp(0, kGlobalRegions.length - 1);
+    _manualTimeOffset = (prefs.getInt('manual_time_offset') ?? 0).clamp(-30, 30);
+    _hijriDayOffset = (prefs.getInt('hijri_day_offset') ?? 0).clamp(-2, 2);
+
+    // Notifications
+    _notifSehriStart = prefs.getBool('notif_sehri_start') ?? false;
+    _notifSehriEnd = prefs.getBool('notif_sehri_end') ?? false;
+    _notifIftar = prefs.getBool('notif_iftar') ?? false;
+    _notifForbidden = prefs.getBool('notif_forbidden') ?? true;
+
+    if (mounted) {
+      setState(() {});
+      _refreshLiveStatusAndWidget();
+      _rescheduleNotifications();
+    }
   }
 
-  Future<void> _updateNotifications() async {
-    final now = DateTime.now();
-    final times = SolarCalculator.getTimes(
-      now,
-      lat: _userLat,
-      lng: _userLng,
-      offsetMin: _districtOffsetMin,
-    );
+  Future<void> _saveAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        'dhikr_list', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
+    await prefs.setInt('selected_dhikr_index', _selectedDhikrIndex);
+    await prefs.setInt('session_count', _sessionCount);
+    await prefs.setInt('lifetime_count', _lifetimeCount);
+    await prefs.setString('weekly_history', jsonEncode(_weeklyHistory));
 
-    await NotificationService().scheduleDailyTimers(
-      times: times,
-      enableSehriStart: _notifSehriStart,
-      enableSehriAlert: _notifSehriAlert,
-      enableIftar: _notifIftar,
-      enableForbidden: _notifForbidden,
-      sehriAlertMinutesBefore: 20,
+    await prefs.setInt('theme_mode', _themeMode.index);
+    await prefs.setDouble('font_scale', _fontScale);
+    await prefs.setInt('region_index', _regionIndex);
+    await prefs.setInt('manual_time_offset', _manualTimeOffset);
+    await prefs.setInt('hijri_day_offset', _hijriDayOffset);
+
+    await prefs.setBool('notif_sehri_start', _notifSehriStart);
+    await prefs.setBool('notif_sehri_end', _notifSehriEnd);
+    await prefs.setBool('notif_iftar', _notifIftar);
+    await prefs.setBool('notif_forbidden', _notifForbidden);
+  }
+
+  void _refreshLiveStatusAndWidget() {
+    final status = SolarEngine.getLiveStatus(
+      region: kGlobalRegions[_regionIndex],
+      manualOffsetMinutes: _manualTimeOffset,
+      hijriDayAdjustment: _hijriDayOffset,
+    );
+    if (mounted) {
+      setState(() {
+        _liveStatus = status;
+        _todayCount = _weeklyHistory[_todayKey()] ?? 0;
+      });
+    }
+    WidgetSyncService.sync(todayCount: _todayCount, status: status);
+  }
+
+  void _rescheduleNotifications() {
+    NotificationService.instance.rescheduleAll(
+      region: kGlobalRegions[_regionIndex],
+      manualOffsetMinutes: _manualTimeOffset,
+      notifSehriStart: _notifSehriStart,
+      notifSehriEnd: _notifSehriEnd,
+      notifIftar: _notifIftar,
+      notifForbidden: _notifForbidden,
     );
   }
 
-  Future<void> _loadAllData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _fontScale = prefs.getDouble('fontScale') ?? 1.0;
-      _hijriOffset = prefs.getInt('hijriOffset') ?? 0;
-
-      _countryName = prefs.getString('countryName') ?? "Bangladesh";
-      _userLat = prefs.getDouble('userLat') ?? 23.8103;
-      _userLng = prefs.getDouble('userLng') ?? 90.4125;
-      _districtOffsetMin = prefs.getInt('districtOffsetMin') ?? 0;
-
-      _currentIndex = prefs.getInt('currentIndex') ?? 0;
-      _currentCount = prefs.getInt('currentCount') ?? 0;
-
-      _notifSehriStart = prefs.getBool('notifSehriStart') ?? true;
-      _notifSehriAlert = prefs.getBool('notifSehriAlert') ?? true;
-      _notifIftar = prefs.getBool('notifIftar') ?? true;
-      _notifForbidden = prefs.getBool('notifForbidden') ?? true;
-
-      final dhikrString = prefs.getString('dhikrList');
-      if (dhikrString != null) {
-        final List decoded = jsonDecode(dhikrString);
-        _dhikrList = decoded.map((e) => DhikrItem.fromJson(e)).toList();
+  void _incrementCounter() {
+    final currentDhikr = _dhikrList[_selectedDhikrIndex];
+    setState(() {
+      // Auto-restart from 1 on the tap after reaching target
+      if (_sessionCount >= currentDhikr.target) {
+        _sessionCount = 1;
       } else {
-        _dhikrList = [
-          DhikrItem(title: "Subhanallah", arabic: "سُبْحَانَ ٱللَّٰهِ", meaning: "Glory be to Allah", target: 33),
-          DhikrItem(title: "Alhamdulillah", arabic: "ٱلْحَمْدُ لِلَّٰهِ", meaning: "Praise be to Allah", target: 33),
-          DhikrItem(title: "Allahu Akbar", arabic: "ٱللَّٰهُ أَكْبَرُ", meaning: "Allah is the Greatest", target: 34),
-          DhikrItem(title: "Kalima Tayyibah", arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ مُحَمَّدٌ رَّسُولُ ٱللَّٰهِ", meaning: "There is no god but Allah, Muhammad is the Messenger of Allah", target: 100),
-          DhikrItem(title: "Astaghfirullah", arabic: "أَسْتَغْفِرُ ٱللَّٰهَ", meaning: "I seek forgiveness from Allah", target: 100),
-        ];
+        _sessionCount++;
       }
 
-      if (_currentIndex >= _dhikrList.length) _currentIndex = 0;
-
-      final historyString = prefs.getString('dailyHistory');
-      if (historyString != null) {
-        final Map<String, dynamic> decoded = jsonDecode(historyString);
-        _dailyHistory = decoded.map((k, v) => MapEntry(k, v as int));
+      if (_sessionCount == currentDhikr.target) {
+        HapticFeedback.heavyImpact();
+      } else {
+        HapticFeedback.lightImpact();
       }
 
-      await _updateNotifications();
+      _lifetimeCount++;
+      final key = _todayKey();
+      _todayCount = (_weeklyHistory[key] ?? 0) + 1;
+      _weeklyHistory[key] = _todayCount;
+    });
 
-      if (mounted) setState(() {});
-    } catch (_) {}
+    _saveAll();
+    WidgetSyncService.sync(todayCount: _todayCount, status: _liveStatus);
   }
 
-  Future<void> _checkTimeNoticePrompt() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bool hidePrompt = prefs.getBool('hide_time_notice_prompt') ?? false;
-      if (!hidePrompt && mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showInitialTimeNoticeDialog();
-        });
-      }
-    } catch (_) {}
+  void _resetSession() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _sessionCount = 0;
+    });
+    _saveAll();
   }
 
-  void _showInitialTimeNoticeDialog() {
-    bool doNotShowAgain = false;
+  void _resetLifetime() {
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _lifetimeCount = 0;
+    });
+    _saveAll();
+  }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          backgroundColor: const Color(0xFF222428),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Row(
-            children: [
-              Icon(Icons.access_time_filled, color: Color(0xFF00B074)),
-              SizedBox(width: 10),
-              Text(
-                'Set Your Local Time',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+  void _switchDhikr(int delta) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _selectedDhikrIndex =
+          (_selectedDhikrIndex + delta + _dhikrList.length) % _dhikrList.length;
+      _sessionCount = 0;
+    });
+    _saveAll();
+  }
+
+  // Theme Palette Helper
+  Color get _bgColor {
+    switch (_themeMode) {
+      case AppThemeMode.light:
+        return const Color(0xFFF8F9FA); // Porcelain White
+      case AppThemeMode.amoled:
+        return const Color(0xFF000000); // Pure AMOLED Black
+      case AppThemeMode.dark:
+        return const Color(0xFF0F131A); // Deep Slate Dark
+    }
+  }
+
+  Color get _cardColor {
+    switch (_themeMode) {
+      case AppThemeMode.light:
+        return const Color(0xFFFFFFFF);
+      case AppThemeMode.amoled:
+        return const Color(0xFF0D0F12);
+      case AppThemeMode.dark:
+        return const Color(0xFF171D26);
+    }
+  }
+
+  Color get _primaryText =>
+      _themeMode == AppThemeMode.light ? const Color(0xFF111827) : const Color(0xFFF8FAFC);
+
+  Color get _secondaryText =>
+      _themeMode == AppThemeMode.light ? const Color(0xFF6B7280) : const Color(0xFF94A3B8);
+
+  Color get _accentEmerald =>
+      _themeMode == AppThemeMode.light ? const Color(0xFF059669) : const Color(0xFF34D399);
+
+  @override
+  Widget build(BuildContext context) {
+    final isLight = _themeMode == AppThemeMode.light;
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Tasbih',
+      theme: ThemeData(
+        brightness: isLight ? Brightness.light : Brightness.dark,
+        scaffoldBackgroundColor: _bgColor,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _accentEmerald,
+          brightness: isLight ? Brightness.light : Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: _buildHomeScreen(),
+    );
+  }
+
+  // ==========================================================================
+  // HOME SCREEN (MINIMALIST: SINGLE SETTINGS ICON, DHIKR CARD, TAP RING)
+  // ==========================================================================
+
+  Widget _buildHomeScreen() {
+    final currentDhikr = _dhikrList[_selectedDhikrIndex];
+    final double progress =
+        currentDhikr.target > 0 ? (_sessionCount / currentDhikr.target).clamp(0.0, 1.0) : 0.0;
+    final bool isTargetHit = _sessionCount >= currentDhikr.target;
+
+    return Builder(
+      builder: (navContext) => Scaffold(
+        backgroundColor: _bgColor,
+        body: SafeArea(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _incrementCounter,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Column(
+                children: [
+                  // TOP BAR: App Title | Live Status & Hijri Pill | Single Settings Icon
+                  Row(
+                    children: [
+                      Text(
+                        'Tasbih',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: _primaryText,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _liveStatus.isForbidden
+                                  ? const Color(0xFFFB7185).withOpacity(0.5)
+                                  : _secondaryText.withOpacity(0.18),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${_liveStatus.icon} ${_liveStatus.label}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _liveStatus.isForbidden
+                                      ? const Color(0xFFFB7185)
+                                      : _accentEmerald,
+                                ),
+                              ),
+                              Text(
+                                _liveStatus.hijriFormatted,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: _secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: 'Settings',
+                        onPressed: () {
+                          Navigator.of(navContext).push(
+                            MaterialPageRoute(
+                              builder: (_) => _buildSettingsPage(),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.settings_rounded, color: _primaryText, size: 26),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // DHIKR DISPLAY CARD (Title, Arabic, English Meaning, Up/Down Arrows)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _secondaryText.withOpacity(0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                currentDhikr.title,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 15 * _fontScale,
+                                  fontWeight: FontWeight.w700,
+                                  color: _accentEmerald,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                currentDhikr.arabic,
+                                textAlign: TextAlign.center,
+                                textDirection: TextDirection.rtl,
+                                style: TextStyle(
+                                  fontSize: 30 * _fontScale,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.45,
+                                  color: _primaryText,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                currentDhikr.meaning,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13.5 * _fontScale,
+                                  color: _secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => _switchDhikr(-1),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(Icons.keyboard_arrow_up_rounded,
+                                    color: _secondaryText, size: 28),
+                              ),
+                            ),
+                            Text(
+                              '${_selectedDhikrIndex + 1}/${_dhikrList.length}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: _secondaryText,
+                              ),
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => _switchDhikr(1),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(Icons.keyboard_arrow_down_rounded,
+                                    color: _secondaryText, size: 28),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // CENTER COUNTER RING
+                  Expanded(
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 230,
+                            height: 230,
+                            child: CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 10,
+                              backgroundColor: _secondaryText.withOpacity(0.15),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                isTargetHit ? const Color(0xFFFBBF24) : _accentEmerald,
+                              ),
+                              strokeCap: StrokeCap.round,
+                            ),
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$_sessionCount',
+                                style: TextStyle(
+                                  fontSize: 64,
+                                  fontWeight: FontWeight.w800,
+                                  color: _primaryText,
+                                  height: 1.05,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                isTargetHit
+                                    ? 'Target Reached • Tap for 1'
+                                    : 'Target: ${currentDhikr.target}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isTargetHit
+                                      ? const Color(0xFFFBBF24)
+                                      : _secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // BOTTOM BAR: Reset Session (0) | Lifetime Total (Tap to reset with confirm)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: _resetSession,
+                        child: Container(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _cardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: _secondaryText.withOpacity(0.18)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.refresh_rounded,
+                                  size: 18, color: _secondaryText),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Reset',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => _confirmResetTotal(navContext),
+                        child: Container(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _cardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: _accentEmerald.withOpacity(0.35)),
+                          ),
+                          child: Text(
+                            'Today: $_todayCount  •  Total: $_lifetimeCount',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: _accentEmerald,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
               ),
-            ],
+            ),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ),
+    );
+  }
+
+  void _confirmResetTotal(BuildContext ctx) {
+    showDialog(
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: _cardColor,
+        title: Text('Reset Lifetime Total?', style: TextStyle(color: _primaryText)),
+        content: Text(
+          'This will reset your lifetime counter ($_lifetimeCount) back to 0.',
+          style: TextStyle(color: _secondaryText),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: Text('Cancel', style: TextStyle(color: _secondaryText)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dCtx);
+              _resetLifetime();
+            },
+            child: const Text('Reset', style: TextStyle(color: Color(0xFFFB7185))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================================================
+  // SETTINGS PAGE (DHIKR COLLECTION, REGION/TIMEZONE, NOTIFICATIONS, THEMES)
+  // ==========================================================================
+
+  Widget _buildSettingsPage() {
+    return StatefulBuilder(
+      builder: (ctx, setModalState) {
+        final region = kGlobalRegions[_regionIndex];
+        final todaySolar =
+            SolarEngine.calculate(SolarEngine.nowInRegion(region), region, _manualTimeOffset);
+
+        void updateSetting(VoidCallback fn) {
+          setState(fn);
+          setModalState(() {});
+          _saveAll();
+          _refreshLiveStatusAndWidget();
+        }
+
+        return Scaffold(
+          backgroundColor: _bgColor,
+          appBar: AppBar(
+            backgroundColor: _bgColor,
+            elevation: 0,
+            title: Text('Settings',
+                style: TextStyle(color: _primaryText, fontWeight: FontWeight.w700)),
+            iconTheme: IconThemeData(color: _primaryText),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              const Text(
-                'Prayer and Iftar times are calculated offline based on your country\'s capital. If your local mosque differs by a few minutes, adjust the offset in Settings.',
-                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              // 1. DHIKR COLLECTION MANAGER
+              _sectionHeader('Dhikr Collection'),
+              _settingsCard(
+                child: ListTile(
+                  leading: Icon(Icons.format_list_bulleted_rounded, color: _accentEmerald),
+                  title: Text('Manage Dhikr List (${_dhikrList.length})',
+                      style: TextStyle(color: _primaryText, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Add, edit, or delete custom Dhikr items',
+                      style: TextStyle(color: _secondaryText, fontSize: 12.5)),
+                  trailing: Icon(Icons.chevron_right_rounded, color: _secondaryText),
+                  onTap: () async {
+                    await Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => _buildDhikrManagerPage(),
+                      ),
+                    );
+                    setModalState(() {});
+                  },
+                ),
               ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: () {
-                  setDlgState(() {
-                    doNotShowAgain = !doNotShowAgain;
-                  });
-                },
-                child: Row(
+
+              const SizedBox(height: 18),
+
+              // 2. COUNTRY, CITY & TIMEZONE + LIVE OFFSET PREVIEW
+              _sectionHeader('Location, Timezone & Solar Sync'),
+              _settingsCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      InkWell(
+                        onTap: () => _openRegionPicker(ctx, () {
+                          setModalState(() {});
+                          _rescheduleNotifications();
+                        }),
+                        child: Row(
+                          children: [
+                            Icon(Icons.public_rounded, color: _accentEmerald),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(region.name,
+                                      style: TextStyle(
+                                          color: _primaryText,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15)),
+                                  Text('${region.timezone} (${region.utcLabel})',
+                                      style: TextStyle(
+                                          color: _secondaryText, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.search_rounded, color: _accentEmerald),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 22),
+
+                      // Live Preview Box (Sehri End, Fajr 3m Gap, Iftar)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _accentEmerald.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Sehri Ends: ${SolarEngine.formatMinutes12h(todaySolar.sehriEndMin)}  •  Fajr: ${SolarEngine.formatMinutes12h(todaySolar.fajrStartMin)}',
+                              style: TextStyle(
+                                  color: _primaryText,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Iftar / Sunset: ${SolarEngine.formatMinutes12h(todaySolar.sunsetMin)}',
+                              style: TextStyle(
+                                  color: _accentEmerald,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Manual Minute Offset (-30 to +30 mins)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text('Local Mosque Offset',
+                                style: TextStyle(
+                                    color: _primaryText, fontWeight: FontWeight.w600)),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: _manualTimeOffset > -30
+                                    ? () {
+                                        updateSetting(() => _manualTimeOffset--);
+                                        _rescheduleNotifications();
+                                      }
+                                    : null,
+                                icon: const Icon(Icons.remove_circle_outline_rounded),
+                              ),
+                              Text(
+                                '${_manualTimeOffset >= 0 ? '+' : ''}$_manualTimeOffset min',
+                                style: TextStyle(
+                                    color: _accentEmerald,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                              IconButton(
+                                onPressed: _manualTimeOffset < 30
+                                    ? () {
+                                        updateSetting(() => _manualTimeOffset++);
+                                        _rescheduleNotifications();
+                                      }
+                                    : null,
+                                icon: const Icon(Icons.add_circle_outline_rounded),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      // Hijri Day Adjustment (-2 to +2 days)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text('Hijri Moon Sighting',
+                                style: TextStyle(
+                                    color: _primaryText, fontWeight: FontWeight.w600)),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: _hijriDayOffset > -2
+                                    ? () => updateSetting(() => _hijriDayOffset--)
+                                    : null,
+                                icon: const Icon(Icons.remove_circle_outline_rounded),
+                              ),
+                              Text(
+                                '${_hijriDayOffset >= 0 ? '+' : ''}$_hijriDayOffset d',
+                                style: TextStyle(
+                                    color: _accentEmerald,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                              IconButton(
+                                onPressed: _hijriDayOffset < 2
+                                    ? () => updateSetting(() => _hijriDayOffset++)
+                                    : null,
+                                icon: const Icon(Icons.add_circle_outline_rounded),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // 3. SMART NOTIFICATIONS (4 SEPARATE SWITCHES)
+              _sectionHeader('Smart Notifications'),
+              _settingsCard(
+                child: Column(
                   children: [
-                    Checkbox(
-                      value: doNotShowAgain,
-                      activeColor: const Color(0xFF00B074),
-                      checkColor: Colors.white,
-                      onChanged: (val) {
-                        setDlgState(() {
-                          doNotShowAgain = val ?? false;
-                        });
+                    SwitchListTile(
+                      activeColor: _accentEmerald,
+                      title: Text('Sehri Start Reminder',
+                          style: TextStyle(color: _primaryText, fontSize: 14.5)),
+                      subtitle: Text('60 mins before Sehri ends',
+                          style: TextStyle(color: _secondaryText, fontSize: 12)),
+                      value: _notifSehriStart,
+                      onChanged: (v) {
+                        updateSetting(() => _notifSehriStart = v);
+                        _rescheduleNotifications();
                       },
                     ),
-                    const Text(
-                      'Don\'t show again',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    Divider(height: 1, color: _secondaryText.withOpacity(0.12)),
+                    SwitchListTile(
+                      activeColor: _accentEmerald,
+                      title: Text('Sehri Ending Warning',
+                          style: TextStyle(color: _primaryText, fontSize: 14.5)),
+                      subtitle: Text('20 mins before Sehri ends',
+                          style: TextStyle(color: _secondaryText, fontSize: 12)),
+                      value: _notifSehriEnd,
+                      onChanged: (v) {
+                        updateSetting(() => _notifSehriEnd = v);
+                        _rescheduleNotifications();
+                      },
+                    ),
+                    Divider(height: 1, color: _secondaryText.withOpacity(0.12)),
+                    SwitchListTile(
+                      activeColor: _accentEmerald,
+                      title: Text('Iftar / Sunset Alert',
+                          style: TextStyle(color: _primaryText, fontSize: 14.5)),
+                      subtitle: Text('Exact sunset time in selected timezone',
+                          style: TextStyle(color: _secondaryText, fontSize: 12)),
+                      value: _notifIftar,
+                      onChanged: (v) {
+                        updateSetting(() => _notifIftar = v);
+                        _rescheduleNotifications();
+                      },
+                    ),
+                    Divider(height: 1, color: _secondaryText.withOpacity(0.12)),
+                    SwitchListTile(
+                      activeColor: _accentEmerald,
+                      title: Text('Forbidden Salah Times',
+                          style: TextStyle(color: _primaryText, fontSize: 14.5)),
+                      subtitle: Text('Sunrise, Zawwal (Midday) & Sunset alerts',
+                          style: TextStyle(color: _secondaryText, fontSize: 12)),
+                      value: _notifForbidden,
+                      onChanged: (v) {
+                        updateSetting(() => _notifForbidden = v);
+                        _rescheduleNotifications();
+                      },
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 18),
+
+              // 4. APPEARANCE & FONT SIZE
+              _sectionHeader('Appearance & Font Scaling'),
+              _settingsCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('App Theme',
+                          style: TextStyle(
+                              color: _primaryText, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _themeChip('Dark', AppThemeMode.dark, updateSetting),
+                          const SizedBox(width: 8),
+                          _themeChip('Light', AppThemeMode.light, updateSetting),
+                          const SizedBox(width: 8),
+                          _themeChip('AMOLED', AppThemeMode.amoled, updateSetting),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Arabic & Text Size',
+                              style: TextStyle(
+                                  color: _primaryText, fontWeight: FontWeight.w600)),
+                          Text('${(_fontScale * 100).round()}%',
+                              style: TextStyle(
+                                  color: _accentEmerald, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                      Slider(
+                        value: _fontScale,
+                        min: 0.8,
+                        max: 1.4,
+                        divisions: 6,
+                        activeColor: _accentEmerald,
+                        onChanged: (v) => updateSetting(() => _fontScale = v),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // 5. LAST 7 DAYS PROGRESS CHART
+              _sectionHeader('Last 7 Days Progress'),
+              _settingsCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: _build7DayChart(),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // 6. ABOUT TASBIH (QURAN VERSE & DEVELOPER AHM)
+              _sectionHeader('About Tasbih'),
+              _settingsCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: _accentEmerald.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: _accentEmerald.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+                              textAlign: TextAlign.center,
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: _primaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '"Verily, in the remembrance of Allah do hearts find rest." (Surah Ar-Ra\'d 13:28)',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontStyle: FontStyle.italic,
+                                color: _secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Developed by AHM',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Please remember the developer in your sincere Duas.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: _secondaryText),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse('https://www.facebook.com/ahm.79316');
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        },
+                        icon: Icon(Icons.open_in_new_rounded,
+                            size: 16, color: _accentEmerald),
+                        label: Text('Connect on Facebook',
+                            style: TextStyle(color: _accentEmerald)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                if (doNotShowAgain) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('hide_time_notice_prompt', true);
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('Later', style: TextStyle(color: Colors.white60)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00B074),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('hide_time_notice_prompt', true);
-                Navigator.pop(ctx);
-                _openSettingsModal();
-              },
-              child: const Text('Adjust Now', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+        );
+      },
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          color: _secondaryText,
         ),
       ),
     );
   }
 
-  Future<void> _saveAllData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('fontScale', _fontScale);
-      await prefs.setInt('hijriOffset', _hijriOffset);
-
-      await prefs.setString('countryName', _countryName);
-      await prefs.setDouble('userLat', _userLat);
-      await prefs.setDouble('userLng', _userLng);
-      await prefs.setInt('districtOffsetMin', _districtOffsetMin);
-
-      await prefs.setInt('currentIndex', _currentIndex);
-      await prefs.setInt('currentCount', _currentCount);
-      await prefs.setString('dhikrList', jsonEncode(_dhikrList.map((e) => e.toJson()).toList()));
-      await prefs.setString('dailyHistory', jsonEncode(_dailyHistory));
-
-      await prefs.setBool('notifSehriStart', _notifSehriStart);
-      await prefs.setBool('notifSehriAlert', _notifSehriAlert);
-      await prefs.setBool('notifIftar', _notifIftar);
-      await prefs.setBool('notifForbidden', _notifForbidden);
-    } catch (_) {}
+  Widget _settingsCard({required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _secondaryText.withOpacity(0.15)),
+      ),
+      child: child,
+    );
   }
 
-  void _onTapCounter() {
-    if (_dhikrList.isEmpty) return;
-
-    setState(() {
-      final target = _dhikrList[_currentIndex].target;
-
-      if (target > 0 && _currentCount >= target) {
-        _currentCount = 1;
-      } else {
-        _currentCount++;
-      }
-
-      _dhikrList[_currentIndex].lifetimeCount++;
-
-      final today = _getTodayKey();
-      _dailyHistory[today] = (_dailyHistory[today] ?? 0) + 1;
-    });
-
-    _saveAllData();
-  }
-
-  void _resetCurrentCount() {
-    setState(() {
-      _currentCount = 0;
-    });
-    _saveAllData();
-  }
-
-  void _resetLifetimeCount() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222428),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Reset Total Count?', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Do you want to reset total count for "${_dhikrList[_currentIndex].title}" to 0?',
-          style: const TextStyle(color: Colors.white70),
+  Widget _themeChip(
+      String label, AppThemeMode mode, void Function(VoidCallback) updateSetting) {
+    final selected = _themeMode == mode;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => updateSetting(() => _themeMode = mode),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? _accentEmerald : _bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? _accentEmerald : _secondaryText.withOpacity(0.25),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.black : _primaryText,
+            ),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent.shade700),
-            onPressed: () {
-              setState(() {
-                _dhikrList[_currentIndex].lifetimeCount = 0;
-              });
-              _saveAllData();
-              Navigator.pop(ctx);
-            },
-            child: const Text('Reset', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
 
-  void _nextDhikr() {
-    if (_dhikrList.isEmpty) return;
-    setState(() {
-      _currentIndex = (_currentIndex + 1) % _dhikrList.length;
-      _currentCount = 0;
-    });
-    _saveAllData();
-  }
+  Widget _build7DayChart() {
+    final now = DateTime.now();
+    final List<DateTime> days =
+        List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+    int maxVal = 10;
+    for (final d in days) {
+      final count = _weeklyHistory[DateFormat('yyyy-MM-dd').format(d)] ?? 0;
+      if (count > maxVal) maxVal = count;
+    }
 
-  void _prevDhikr() {
-    if (_dhikrList.isEmpty) return;
-    setState(() {
-      _currentIndex = (_currentIndex - 1 + _dhikrList.length) % _dhikrList.length;
-      _currentCount = 0;
-    });
-    _saveAllData();
-  }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: days.map((d) {
+        final key = DateFormat('yyyy-MM-dd').format(d);
+        final count = _weeklyHistory[key] ?? 0;
+        final double barHeight = (count / maxVal * 70).clamp(6.0, 70.0);
+        final bool isToday = key == _todayKey();
 
-  String _xorEncrypt(String text, String key) {
-    if (key.isEmpty) return text;
-    final textBytes = utf8.encode(text);
-    final keyBytes = utf8.encode(key);
-    final encrypted = List<int>.generate(textBytes.length, (i) {
-      return textBytes[i] ^ keyBytes[i % keyBytes.length];
-    });
-    return base64Encode(encrypted);
-  }
-
-  String _xorDecrypt(String base64Text, String key) {
-    if (key.isEmpty) return base64Text;
-    final encryptedBytes = base64Decode(base64Text);
-    final keyBytes = utf8.encode(key);
-    final decrypted = List<int>.generate(encryptedBytes.length, (i) {
-      return encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
-    });
-    return utf8.decode(decrypted);
-  }
-
-  void _showEncryptedBackupDialog() {
-    final pinCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222428),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Backup with PIN / Password', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: minAxisSize,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter a 4-digit PIN or password to secure your backup data (Optional):',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: pinCtrl,
-              obscureText: true,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: 'PIN / Password',
-                hintStyle: TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Color(0xFF1E2024),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
-            onPressed: () {
-              final pin = pinCtrl.text.trim();
-              final rawJson = jsonEncode({
-                'dhikrList': _dhikrList.map((e) => e.toJson()).toList(),
-                'dailyHistory': _dailyHistory,
-                'hasPin': pin.isNotEmpty,
-              });
-
-              final encryptedData = pin.isNotEmpty ? "ENC:${_xorEncrypt(rawJson, pin)}" : rawJson;
-              Clipboard.setData(ClipboardData(text: encryptedData));
-
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Secure backup copied to clipboard!')),
-              );
-            },
-            child: const Text('Copy Backup', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static const MainAxisSize minAxisSize = MainAxisSize.min;
-
-  void _showEncryptedRestoreDialog() {
-    final pinCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222428),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Restore Data', style: TextStyle(color: Colors.white)),
-        content: Column(
+        return Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Paste your backup from clipboard. If it was PIN protected, enter your PIN below:',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isToday ? _accentEmerald : _secondaryText,
+              ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: pinCtrl,
-              obscureText: true,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: 'PIN / Password (if protected)',
-                hintStyle: TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Color(0xFF1E2024),
+            const SizedBox(height: 4),
+            Container(
+              width: 24,
+              height: barHeight,
+              decoration: BoxDecoration(
+                color: isToday ? _accentEmerald : _accentEmerald.withOpacity(0.35),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              DateFormat('E').format(d),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                color: isToday ? _primaryText : _secondaryText,
               ),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
-            onPressed: () async {
-              final pin = pinCtrl.text.trim();
-              final clip = await Clipboard.getData(Clipboard.kTextPlain);
-              if (clip?.text == null) return;
-
-              try {
-                String text = clip!.text!.trim();
-                if (text.startsWith("ENC:")) {
-                  text = _xorDecrypt(text.substring(4), pin);
-                }
-                final decoded = jsonDecode(text);
-                if (decoded['dhikrList'] != null) {
-                  final List list = decoded['dhikrList'];
-                  _dhikrList = list.map((e) => DhikrItem.fromJson(e)).toList();
-                }
-                if (decoded['dailyHistory'] != null) {
-                  final Map<String, dynamic> hist = decoded['dailyHistory'];
-                  _dailyHistory = hist.map((k, v) => MapEntry(k, v as int));
-                }
-
-                setState(() {
-                  _currentIndex = 0;
-                  _currentCount = 0;
-                });
-                _saveAllData();
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Data restored successfully!')),
-                );
-              } catch (_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invalid backup or wrong PIN.')),
-                );
-              }
-            },
-            child: const Text('Restore', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
-  void _openCountrySearchDialog(StateSetter setSettingsState) {
-    String query = "";
+  // ==========================================================================
+  // SEARCHABLE COUNTRY / CITY / TIMEZONE PICKER
+  // ==========================================================================
+
+  void _openRegionPicker(BuildContext ctx, VoidCallback onSelected) {
+    String query = '';
     showModalBottomSheet(
-      context: context,
+      context: ctx,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E2024),
+      backgroundColor: _cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final filteredCountries = SolarCalculator.worldCountries.where((c) {
-            return c.name.toLowerCase().contains(query.toLowerCase());
-          }).toList();
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) {
+          final filtered = kGlobalRegions
+              .asMap()
+              .entries
+              .where((entry) =>
+                  entry.value.name.toLowerCase().contains(query.toLowerCase()) ||
+                  entry.value.timezone.toLowerCase().contains(query.toLowerCase()))
+              .toList();
 
           return SizedBox(
-            height: MediaQuery.of(context).size.height * 0.82,
+            height: MediaQuery.of(sheetCtx).size.height * 0.78,
             child: Column(
               children: [
+                const SizedBox(height: 12),
                 Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
+                    color: _secondaryText.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.all(16),
                   child: TextField(
-                    autofocus: false,
-                    style: const TextStyle(color: Colors.white),
+                    autofocus: true,
+                    style: TextStyle(color: _primaryText),
                     decoration: InputDecoration(
-                      hintText: 'Search country...',
-                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF00B074)),
+                      hintText: 'Search Makkah, Madinah, Dhaka, Kolkata, London...',
+                      hintStyle: TextStyle(color: _secondaryText, fontSize: 13.5),
+                      prefixIcon: Icon(Icons.search_rounded, color: _accentEmerald),
                       filled: true,
-                      fillColor: const Color(0xFF26282D),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                      fillColor: _bgColor,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    onChanged: (val) {
-                      setModalState(() {
-                        query = val;
-                      });
-                    },
+                    onChanged: (val) => setSheetState(() => query = val),
                   ),
                 ),
-                const Divider(color: Colors.white12, height: 1),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: filteredCountries.length,
-                    itemBuilder: (context, index) {
-                      final country = filteredCountries[index];
-                      final isSelected = country.name == _countryName;
+                  child: ListView.separated(
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: _secondaryText.withOpacity(0.1)),
+                    itemBuilder: (_, idx) {
+                      final entry = filtered[idx];
+                      final isSelected = entry.key == _regionIndex;
                       return ListTile(
-                        onTap: () {
-                          setState(() {
-                            _countryName = country.name;
-                            _userLat = country.lat;
-                            _userLng = country.lng;
-                            _districtOffsetMin = 0;
-                          });
-                          setSettingsState(() {});
-                          _saveAllData();
-                          _updateNotifications();
-                          Navigator.pop(ctx);
-                        },
-                        leading: Icon(
-                          Icons.public,
-                          color: isSelected ? const Color(0xFF00B074) : Colors.white38,
-                          size: 20,
-                        ),
                         title: Text(
-                          country.name,
+                          entry.value.name,
                           style: TextStyle(
-                            color: isSelected ? const Color(0xFF00B074) : Colors.white,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? _accentEmerald : _primaryText,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
+                        subtitle: Text(
+                          '${entry.value.timezone} • ${entry.value.utcLabel}',
+                          style: TextStyle(color: _secondaryText, fontSize: 12),
+                        ),
                         trailing: isSelected
-                            ? const Icon(Icons.check_circle, color: Color(0xFF00B074), size: 20)
+                            ? Icon(Icons.check_circle_rounded, color: _accentEmerald)
                             : null,
+                        onTap: () {
+                          setState(() {
+                            _regionIndex = entry.key;
+                          });
+                          _saveAll();
+                          _refreshLiveStatusAndWidget();
+                          Navigator.pop(sheetCtx);
+                          onSelected();
+                        },
                       );
                     },
                   ),
@@ -1083,867 +1868,222 @@ class _TasbihHomeScreenState extends State<TasbihHomeScreen> with WidgetsBinding
     );
   }
 
-  void _openDhikrListModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E2024),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.78,
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
+  // ==========================================================================
+  // DHIKR COLLECTION MANAGER (ADD, EDIT & SAFE DELETE WITH CONFIRMATION)
+  // ==========================================================================
+
+  Widget _buildDhikrManagerPage() {
+    return StatefulBuilder(
+      builder: (ctx, setMgrState) {
+        return Scaffold(
+          backgroundColor: _bgColor,
+          appBar: AppBar(
+            backgroundColor: _bgColor,
+            elevation: 0,
+            title: Text('Dhikr Collection',
+                style: TextStyle(color: _primaryText, fontWeight: FontWeight.w700)),
+            iconTheme: IconThemeData(color: _primaryText),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            backgroundColor: _accentEmerald,
+            foregroundColor: Colors.black,
+            onPressed: () => _openDhikrEditor(ctx, null, () => setMgrState(() {})),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add Dhikr', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          body: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+            itemCount: _dhikrList.length,
+            itemBuilder: (_, idx) {
+              final item = _dhikrList[idx];
+              final isSelected = idx == _selectedDhikrIndex;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
+                  color: _cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isSelected
+                        ? _accentEmerald
+                        : _secondaryText.withOpacity(0.15),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Dhikr Collection',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle, color: Color(0xFF00B074), size: 28),
-                      onPressed: () => _showAddEditDhikrDialog(setModalState),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white12, height: 1),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _dhikrList.length,
-                  itemBuilder: (context, index) {
-                    final item = _dhikrList[index];
-                    final isSelected = index == _currentIndex;
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF00B074).withOpacity(0.12) : const Color(0xFF26282D),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF00B074) : Colors.transparent,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: ListTile(
-                        onTap: () {
-                          setState(() {
-                            _currentIndex = index;
-                            _currentCount = 0;
-                          });
-                          _saveAllData();
-                          Navigator.pop(ctx);
-                        },
-                        title: Text(
-                          item.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? const Color(0xFF00B074) : Colors.white,
-                          ),
-                        ),
-                        subtitle: Text(
-                          "${item.arabic}\nTarget: ${item.target > 0 ? item.target : '∞'}",
-                          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.3),
-                        ),
-                        isThreeLine: true,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_note, color: Colors.white70),
-                              onPressed: () => _showAddEditDhikrDialog(setModalState, item: item, index: index),
-                            ),
-                            if (_dhikrList.length > 1)
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                onPressed: () => _confirmDeleteDhikr(index, setModalState),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
+                child: ListTile(
+                  onTap: () {
+                    setState(() {
+                      _selectedDhikrIndex = idx;
+                      _sessionCount = 0;
+                    });
+                    _saveAll();
+                    Navigator.pop(ctx);
                   },
+                  title: Text(
+                    '${item.title} (Target: ${item.target})',
+                    style: TextStyle(
+                      color: isSelected ? _accentEmerald : _primaryText,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        item.arabic,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                            color: _primaryText,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        item.meaning,
+                        style: TextStyle(color: _secondaryText, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit_rounded, color: _secondaryText, size: 20),
+                        onPressed: () =>
+                            _openDhikrEditor(ctx, idx, () => setMgrState(() {})),
+                      ),
+                      if (_dhikrList.length > 1)
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded,
+                              color: Color(0xFFFB7185), size: 20),
+                          onPressed: () {
+                            showDialog(
+                              context: ctx,
+                              builder: (dCtx) => AlertDialog(
+                                backgroundColor: _cardColor,
+                                title: Text('Delete Dhikr?',
+                                    style: TextStyle(color: _primaryText)),
+                                content: Text(
+                                  'Are you sure you want to delete "${item.title}"?',
+                                  style: TextStyle(color: _secondaryText),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dCtx),
+                                    child: Text('Cancel',
+                                        style: TextStyle(color: _secondaryText)),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(dCtx);
+                                      setState(() {
+                                        _dhikrList.removeAt(idx);
+                                        if (_selectedDhikrIndex >= _dhikrList.length) {
+                                          _selectedDhikrIndex = _dhikrList.length - 1;
+                                        }
+                                      });
+                                      setMgrState(() {});
+                                      _saveAll();
+                                    },
+                                    child: const Text('Delete',
+                                        style: TextStyle(color: Color(0xFFFB7185))),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _confirmDeleteDhikr(int index, StateSetter setModalState) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222428),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Dhikr?', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Are you sure you want to delete "${_dhikrList[index].title}"?',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent.shade700),
-            onPressed: () {
-              setState(() {
-                _dhikrList.removeAt(index);
-                if (_currentIndex >= _dhikrList.length) {
-                  _currentIndex = 0;
-                }
-                _currentCount = 0;
-              });
-              setModalState(() {});
-              _saveAllData();
-              Navigator.pop(ctx);
+              );
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  void _showAddEditDhikrDialog(StateSetter setModalState, {DhikrItem? item, int? index}) {
-    final titleCtrl = TextEditingController(text: item?.title ?? '');
-    final arabicCtrl = TextEditingController(text: item?.arabic ?? '');
-    final meaningCtrl = TextEditingController(text: item?.meaning ?? '');
-    final targetCtrl = TextEditingController(text: item?.target.toString() ?? '33');
+  void _openDhikrEditor(BuildContext ctx, int? editIndex, VoidCallback onSaved) {
+    final existing = editIndex != null ? _dhikrList[editIndex] : null;
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final arabicCtrl = TextEditingController(text: existing?.arabic ?? '');
+    final meaningCtrl = TextEditingController(text: existing?.meaning ?? '');
+    final targetCtrl =
+        TextEditingController(text: (existing?.target ?? 33).toString());
 
     showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222428),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(item == null ? 'Add New Dhikr' : 'Edit Dhikr', style: const TextStyle(color: Colors.white)),
+      context: ctx,
+      builder: (dCtx) => AlertDialog(
+        backgroundColor: _cardColor,
+        title: Text(existing == null ? 'Add New Dhikr' : 'Edit Dhikr',
+            style: TextStyle(color: _primaryText)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Title (e.g., Tahmid)', labelStyle: TextStyle(color: Colors.white60)),
+                style: TextStyle(color: _primaryText),
+                decoration: const InputDecoration(labelText: 'Title (e.g., SubhanAllah)'),
               ),
-              const SizedBox(height: 8),
               TextField(
                 controller: arabicCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Arabic Text', labelStyle: TextStyle(color: Colors.white60)),
+                textDirection: TextDirection.rtl,
+                style: TextStyle(color: _primaryText, fontSize: 20),
+                decoration: const InputDecoration(labelText: 'Arabic Text'),
               ),
-              const SizedBox(height: 8),
               TextField(
                 controller: meaningCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Meaning', labelStyle: TextStyle(color: Colors.white60)),
+                style: TextStyle(color: _primaryText),
+                decoration: const InputDecoration(labelText: 'English Meaning'),
               ),
-              const SizedBox(height: 8),
               TextField(
                 controller: targetCtrl,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Target Count', labelStyle: TextStyle(color: Colors.white60)),
+                style: TextStyle(color: _primaryText),
+                decoration: const InputDecoration(labelText: 'Target Count (e.g., 33, 100)'),
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+            onPressed: () => Navigator.pop(dCtx),
+            child: Text('Cancel', style: TextStyle(color: _secondaryText)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B074)),
+          TextButton(
             onPressed: () {
               final title = titleCtrl.text.trim();
               final arabic = arabicCtrl.text.trim();
-              final practicalMeaning = meaningCtrl.text.trim();
-              final target = int.tryParse(targetCtrl.text.trim()) ?? 33;
-
               if (title.isEmpty || arabic.isEmpty) return;
 
+              final target = int.tryParse(targetCtrl.text.trim()) ?? 33;
               setState(() {
-                if (item == null) {
-                  _dhikrList.add(DhikrItem(title: title, arabic: arabic, meaning: practicalMeaning, target: target));
-                } else if (index != null) {
-                  _dhikrList[index].title = title;
-                  _dhikrList[index].arabic = arabic;
-                  _dhikrList[index].meaning = practicalMeaning;
-                  _dhikrList[index].target = target;
+                if (existing == null) {
+                  _dhikrList.add(DhikrItem(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    title: title,
+                    arabic: arabic,
+                    meaning: meaningCtrl.text.trim(),
+                    target: target > 0 ? target : 33,
+                  ));
+                } else {
+                  _dhikrList[editIndex!] = DhikrItem(
+                    id: existing.id,
+                    title: title,
+                    arabic: arabic,
+                    meaning: meaningCtrl.text.trim(),
+                    target: target > 0 ? target : 33,
+                  );
                 }
               });
-              setModalState(() {});
-              _saveAllData();
-              Navigator.pop(ctx);
+              _saveAll();
+              Navigator.pop(dCtx);
+              onSaved();
             },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            child: Text('Save', style: TextStyle(color: _accentEmerald)),
           ),
         ],
-      ),
-    );
-  }
-
-  void _openSettingsModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E2024),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setSettingsState) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.88,
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.settings, color: Color(0xFF00B074)),
-                    SizedBox(width: 10),
-                    Text('Settings & Calculations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ],
-                ),
-              ),
-              const Divider(color: Colors.white12, height: 1),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.public, color: Color(0xFF00B074)),
-                      title: const Text('Country / Region', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      subtitle: Text(_countryName, style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white54),
-                      onTap: () => _openCountrySearchDialog(setSettingsState),
-                    ),
-                    const Divider(color: Colors.white12),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'District / Mosque Time Offset',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Adjust if your local district or mosque azan differs from capital standard time:',
-                            style: TextStyle(color: Colors.white54, fontSize: 12),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF26282D),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.remove_circle, color: Colors.white70, size: 28),
-                                  onPressed: () {
-                                    if (_districtOffsetMin > -30) {
-                                      setState(() => _districtOffsetMin--);
-                                      setSettingsState(() {});
-                                      _saveAllData();
-                                      _updateNotifications();
-                                    }
-                                  },
-                                ),
-                                Column(
-                                  children: [
-                                    Text(
-                                      _districtOffsetMin == 0
-                                          ? "Standard (0m)"
-                                          : (_districtOffsetMin > 0
-                                              ? "+$_districtOffsetMin Minutes"
-                                              : "$_districtOffsetMin Minutes"),
-                                      style: TextStyle(
-                                        color: _districtOffsetMin == 0 ? Colors.white : const Color(0xFF00B074),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Text(
-                                      _districtOffsetMin == 0
-                                          ? "Capital standard time"
-                                          : (_districtOffsetMin > 0 ? "Added to local prayers" : "Subtracted from local prayers"),
-                                      style: const TextStyle(color: Colors.white38, fontSize: 11),
-                                    ),
-                                  ],
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.add_circle, color: Color(0xFF00B074), size: 28),
-                                  onPressed: () {
-                                    if (_districtOffsetMin < 30) {
-                                      setState(() => _districtOffsetMin++);
-                                      setSettingsState(() {});
-                                      _saveAllData();
-                                      _updateNotifications();
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(color: Colors.white12),
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Icon(Icons.notifications_active, color: Color(0xFF00B074), size: 18),
-                          SizedBox(width: 8),
-                          Text('Notification Alerts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                        ],
-                      ),
-                    ),
-                    SwitchListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: const Color(0xFF00B074),
-                      title: const Text('Sehri Start Notification', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      subtitle: const Text('Reminds when Sehri begins', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                      value: _notifSehriStart,
-                      onChanged: (val) {
-                        setState(() => _notifSehriStart = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                        _updateNotifications();
-                      },
-                    ),
-                    SwitchListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: const Color(0xFF00B074),
-                      title: const Text('Sehri Ending Warning (20m left)', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      subtitle: const Text('Urgent alert 20 minutes before Sehri ends', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                      value: _notifSehriAlert,
-                      onChanged: (val) {
-                        setState(() => _notifSehriAlert = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                        _updateNotifications();
-                      },
-                    ),
-                    SwitchListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: const Color(0xFF00B074),
-                      title: const Text('Iftar Notification', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      subtitle: const Text('Alerts right at sunset/Iftar time', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                      value: _notifIftar,
-                      onChanged: (val) {
-                        setState(() => _notifIftar = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                        _updateNotifications();
-                      },
-                    ),
-                    SwitchListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: const Color(0xFF00B074),
-                      title: const Text('Forbidden Times Warning', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      subtitle: const Text('Sunrise, Zawwal & Sunset prayer restrictions', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                      value: _notifForbidden,
-                      onChanged: (val) {
-                        setState(() => _notifForbidden = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                        _updateNotifications();
-                      },
-                    ),
-
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.notification_important, color: Color(0xFF00B074)),
-                      title: const Text('Test Notification Now', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      subtitle: const Text('Tap to test instant notification banner', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                      onTap: () async {
-                        await NotificationService().showInstantTestNotification();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Test notification sent! Check notification bar.')),
-                          );
-                        }
-                      },
-                    ),
-                    const Divider(color: Colors.white12),
-
-                    ListTile(
-                      title: const Text('Font Size Scaling', style: TextStyle(color: Colors.white)),
-                      subtitle: Text('Current: ${(_fontScale * 100).toInt()}%', style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                    ),
-                    Slider(
-                      value: _fontScale,
-                      min: 0.8,
-                      max: 1.4,
-                      divisions: 6,
-                      activeColor: const Color(0xFF00B074),
-                      inactiveColor: Colors.white12,
-                      label: "${(_fontScale * 100).toInt()}%",
-                      onChanged: (val) {
-                        setState(() => _fontScale = val);
-                        setSettingsState(() {});
-                        _saveAllData();
-                      },
-                    ),
-                    const Divider(color: Colors.white12),
-
-                    ListTile(
-                      title: const Text('Hijri Date Adjustment', style: TextStyle(color: Colors.white)),
-                      subtitle: Text('Moon Sighting Offset: ${_hijriOffset >= 0 ? "+$_hijriOffset" : "$_hijriOffset"} Days',
-                          style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [-2, -1, 0, 1, 2].map((offset) {
-                        final isSel = _hijriOffset == offset;
-                        return ChoiceChip(
-                          label: Text(offset == 0 ? "0" : (offset > 0 ? "+$offset" : "$offset")),
-                          selected: isSel,
-                          selectedColor: const Color(0xFF00B074),
-                          onSelected: (_) {
-                            setState(() => _hijriOffset = offset);
-                            setSettingsState(() {});
-                            _saveAllData();
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const Divider(color: Colors.white12),
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Text('Last 7 Days Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                    _buildHistoryBars(),
-                    const Divider(color: Colors.white12),
-
-                    ListTile(
-                      leading: const Icon(Icons.lock_outline, color: Color(0xFF00B074)),
-                      title: const Text('PIN Protected Backup', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('Copy encrypted data to clipboard', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      onTap: () => _showEncryptedBackupDialog(),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.lock_open, color: Color(0xFF00B074)),
-                      title: const Text('Restore Protected Backup', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('Paste encrypted data using PIN', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      onTap: () => _showEncryptedRestoreDialog(),
-                    ),
-                    const Divider(color: Colors.white12),
-
-                    ListTile(
-                      leading: const Icon(Icons.info_outline, color: Color(0xFF00B074)),
-                      title: const Text('About Tasbih', style: TextStyle(color: Colors.white)),
-                      subtitle: const Text('App dedication & developer credits', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _showAboutDialog();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryBars() {
-    final now = DateTime.now();
-    final List<MapEntry<String, int>> last7Days = [];
-
-    for (int i = 6; i >= 0; i--) {
-      final d = now.subtract(Duration(days: i));
-      final k = "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
-      last7Days.add(MapEntry(k, _dailyHistory[k] ?? 0));
-    }
-
-    final maxVal = last7Days.map((e) => e.value).fold(0, (a, b) => a > b ? a : b);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF222428),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: last7Days.map((entry) {
-          final count = entry.value;
-          final double factor = maxVal > 0 ? (count / maxVal) : 0.0;
-          final parts = entry.key.split('-');
-          final dayLabel = "${parts[1]}/${parts[2]}";
-
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                count > 999 ? "${(count / 1000).toStringAsFixed(1)}k" : "$count",
-                style: const TextStyle(fontSize: 10, color: Colors.white60),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: 16,
-                height: 60 * factor + 4,
-                decoration: BoxDecoration(
-                  color: factor > 0 ? const Color(0xFF00B074) : Colors.white10,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(dayLabel, style: const TextStyle(fontSize: 10, color: Colors.white54)),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222428),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('About Tasbih', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '"Verily, in the remembrance of Allah do hearts find rest."',
-                style: TextStyle(color: Color(0xFF00B074), fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Away from the noise of a busy life, this Tasbih is created to keep your moments devoted to the remembrance of your Lord. May every tap bring profound tranquility to your soul and illuminate your heart with faith.\n\nO Allah, keep our tongues moist with Your constant remembrance. Ameen.',
-                style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
-              ),
-              const Divider(color: Colors.white12, height: 24),
-              const Text('Developer: AHM', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: () async {
-                  final uri = Uri.parse('https://www.facebook.com/ahm.79316');
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1877F2).withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF1877F2).withOpacity(0.3)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.facebook, color: Color(0xFF1877F2), size: 22),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Follow Facebook Page',
-                          style: TextStyle(color: Color(0xFF1877F2), fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF00B074))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final times = SolarCalculator.getTimes(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-    final hijri = HijriCalculator.calculate(now, _hijriOffset, sunsetMin: times['sunset']!);
-    final status = SolarCalculator.evaluateStatus(now, lat: _userLat, lng: _userLng, offsetMin: _districtOffsetMin);
-
-    final currentDhikr = _dhikrList.isNotEmpty
-        ? _dhikrList[_currentIndex]
-        : DhikrItem(title: "Tasbih", arabic: "سُبْحَانَ ٱللَّٰهِ", meaning: "Glory be to Allah", target: 33);
-
-    final target = currentDhikr.target;
-    final double progress = target > 0 ? (_currentCount / target).clamp(0.0, 1.0) : 0.0;
-
-    Color badgeBg = const Color(0xFF222428);
-    Color badgeBorder = Colors.white12;
-    Color badgeText = Colors.white70;
-
-    if (status['statusType'] == 1) {
-      badgeBg = const Color(0xFF00B074).withOpacity(0.2);
-      badgeBorder = const Color(0xFF00B074).withOpacity(0.5);
-      badgeText = const Color(0xFF00B074);
-    } else if (status['statusType'] == 2) {
-      badgeBg = const Color(0xFFD32F2F).withOpacity(0.2);
-      badgeBorder = const Color(0xFFD32F2F).withOpacity(0.5);
-      badgeText = Colors.redAccent;
-    }
-
-    return Scaffold(
-      body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _onTapCounter,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Tasbih',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: badgeBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: badgeBorder),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(status['icon'], style: const TextStyle(fontSize: 12)),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  status['statusType'] != 0
-                                      ? "${hijri['day']} ${hijri['month']} • ${status['title']}"
-                                      : "${hijri['day']} ${hijri['month']} ${hijri['year']}",
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: badgeText,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.format_list_bulleted, color: Color(0xFF00B074)),
-                      onPressed: _openDhikrListModal,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.settings, color: Colors.white70),
-                      onPressed: _openSettingsModal,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF222428),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white12),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_upward, size: 18, color: Colors.white60),
-                            onPressed: _prevDhikr,
-                          ),
-                          Expanded(
-                            child: Text(
-                              currentDhikr.title,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF00B074),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_downward, size: 18, color: Colors.white60),
-                            onPressed: _nextDhikr,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        currentDhikr.arabic,
-                        textAlign: TextAlign.center,
-                        textDirection: TextDirection.rtl,
-                        style: TextStyle(
-                          fontSize: 24 * _fontScale,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          height: 1.4,
-                        ),
-                      ),
-                      if (currentDhikr.meaning.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          currentDhikr.meaning,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12 * _fontScale,
-                            color: Colors.white70,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              Expanded(
-                child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 220,
-                        height: 220,
-                        child: CircularProgressIndicator(
-                          value: target > 0 ? progress : 0.0,
-                          strokeWidth: 8,
-                          backgroundColor: const Color(0xFF222428),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00B074)),
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$_currentCount',
-                            style: const TextStyle(
-                              fontSize: 56,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            target > 0 ? 'Target: $target' : 'Target: ∞',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF00B074),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.white70, size: 26),
-                      onPressed: _resetCurrentCount,
-                    ),
-                    GestureDetector(
-                      onTap: _resetLifetimeCount,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF222428),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Total: ${currentDhikr.lifetimeCount}',
-                              style: const TextStyle(fontSize: 13, color: Colors.white70),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.history, size: 14, color: Colors.white54),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 26),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
