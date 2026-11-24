@@ -1,0 +1,927 @@
+{
+  "language": "id",
+  "languageName": "Bahasa Indonesia",
+  "direction": "ltr",
+  "duas": [
+    {
+      "id": 1,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Kalimat Pertama (Thayyibah)",
+      "arabic": "لَا إِلٰهَ إِلَّا اللّٰهُ مُحَمَّدٌ رَّسُولُ اللّٰهِ",
+      "translation": "Tiada tuhan yang berhak disembah selain Allah, dan Nabi Muhammad adalah utusan Allah.",
+      "reference": "Akidah Dasar"
+    },
+    {
+      "id": 2,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Kalimat Kedua (Syahadat)",
+      "arabic": "أَشْهَدُ أَنْ لَّا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ",
+      "translation": "Aku bersaksi bahwa tiada tuhan selain Allah semata, tiada sekutu bagi-Nya, dan aku bersaksi bahwa Muhammad adalah hamba dan utusan-Nya.",
+      "reference": "Akidah Dasar"
+    },
+    {
+      "id": 3,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Kalimat Ketiga (Tamjid)",
+      "arabic": "سُبْحَانَ اللّٰهِ وَالْحَمْدُ لِلّٰهِ وَلَا إِلٰهَ إِلَّا اللّٰهُ وَاللّٰهُ أَكْبَرُ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللّٰهِ الْعَلِيِّ الْعَظِيمِ",
+      "translation": "Mahasuci Allah, segala puji bagi Allah, tiada tuhan selain Allah, dan Allah Mahabesar. Tiada daya dan kekuatan kecuali dengan pertolongan Allah Yang Mahatinggi lagi Mahaagung.",
+      "reference": "Akidah Dasar"
+    },
+    {
+      "id": 4,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Kalimat Keempat (Tauhid)",
+      "arabic": "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ يُحْيِي وَيُمِيتُ وَهُوَ حَيٌّ لَّا يَمُوتُ أَبَدًا أَبَدًا، ذُو الْجَلَالِ وَالْإِكْرَامِ، بِيَدِهِ الْخَيْرُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ",
+      "translation": "Tiada tuhan selain Allah semata, tiada sekutu bagi-Nya. Milik-Nya segala kerajaan dan pujian. Dia menghidupkan dan mematikan, dan Dia Mahahidup kekal selamanya. Pemilik keagungan dan kemuliaan; di tangan-Nya segala kebaikan dan Dia Mahakuasa atas segala sesuatu.",
+      "reference": "Akidah Dasar"
+    },
+    {
+      "id": 5,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Kalimat Kelima (Radde Kufr)",
+      "arabic": "اللّٰهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ أَنْ أُشْرِكَ بِكَ شَيْئًا وَأَنَا أَعْلَمُ بِهِ وَأَسْتَغْفِرُكَ لِمَا لَا أَعْلَمُ بِهِ، تُبْتُ عَنْهُ وَتَبَرَّأْتُ مِنَ الْكُفْرِ وَالشِّرْكِ وَالْكِذْبِ وَالْغِيبَةِ وَالْبِدْعَةِ وَالنَّمِيمَةِ وَالْفَوَاحِشِ وَالْبُهْتَانِ وَالْمَعَاصِي كُلِّهَا، وَأَسْلَمْتُ وَأَقُولُ لَا إِلٰهَ إِلَّا اللّٰهُ مُحَمَّدٌ رَّسُولُ اللّٰهِ",
+      "translation": "Ya Allah, aku berlindung kepada-Mu dari menyekutukan-Mu dengan sesuatu yang kuketahui, dan aku memohon ampun atas apa yang tidak kuketahui. Aku bertobat dan berlepas diri dari kekufuran, syirik, dusta, gibah, bidah, adu domba, perbuatan keji, fitnah, serta segala maksiat. Aku berserah diri dan menyatakan: Tiada tuhan selain Allah dan Muhammad adalah utusan Allah.",
+      "reference": "Akidah Dasar"
+    },
+    {
+      "id": 6,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Iman Mujmal (Ringkasan Iman)",
+      "arabic": "آمَنْتُ بِاللّٰهِ كَمَا هُوَ بِأَسْمَائِهِ وَصِفَاتِهِ وَقَبِلْتُ جَمِيعَ أَحْكَامِهِ إِقْرَارٌ بِاللِّسَانِ وَتَصْدِيقٌ بِالْقَلْبِ",
+      "translation": "Aku beriman kepada Allah sebagaimana Dia dengan segala nama dan sifat-Nya, dan aku menerima semua hukum-Nya dengan ikrar lisan dan pembenaran hati.",
+      "reference": "Pokok Keimanan"
+    },
+    {
+      "id": 7,
+      "category": "Kalimat Syahadat & Iman",
+      "title": "Iman Mufashshal (Rincian Iman)",
+      "arabic": "آمَنْتُ بِاللّٰهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الْآخِرِ وَالْقَدْرِ خَيْرِهِ وَشَرِّهِ مِنَ اللّٰهِ تَعَالَىٰ وَالْبَعْثِ بَعْدَ الْمَوْتِ",
+      "translation": "Aku beriman kepada Allah, para malaikat-Nya, kitab-kitab-Nya, para rasul-Nya, hari akhir, takdir baik maupun buruk dari Allah Ta'ala, serta kebangkitan setelah kematian.",
+      "reference": "Rukun Iman"
+    },
+    {
+      "id": 8,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Sebelum Makan",
+      "arabic": "بِسْمِ اللّٰهِ وَعَلَىٰ بَرَكَةِ اللّٰهِ",
+      "translation": "Dengan nama Allah dan atas keberkahan dari Allah.",
+      "reference": "Al-Hisnul Hashin"
+    },
+    {
+      "id": 9,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Jika Lupa Membaca Basmalah di Awal Makan",
+      "arabic": "بِسْمِ اللّٰهِ أَوَّلَهُ وَآخِرَهُ",
+      "translation": "Dengan nama Allah pada awal dan akhirnya.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 10,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Sesudah Makan",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مِنَ الْمُسْلِمِينَ",
+      "translation": "Segala puji bagi Allah yang telah memberi kami makan dan minum serta menjadikan kami termasuk kaum muslimin.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 11,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Sebelum Tidur (1)",
+      "arabic": "اللّٰهُمَّ بِاسْمِكَ أَمُوتُ وَأَحْيَا",
+      "translation": "Ya Allah, dengan nama-Mu aku mati (tidur) dan dengan nama-Mu aku hidup (bangun).",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 12,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Bangun Tidur",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
+      "translation": "Segala puji bagi Allah yang telah menghidupkan kami kembali setelah mematikan (menidurkan) kami, dan hanya kepada-Nya kami dibangkitkan.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 13,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Masuk Kamar Mandi / Toilet",
+      "arabic": "اللّٰهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ",
+      "translation": "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari gangguan setan laki-laki dan setan perempuan.",
+      "reference": "HR. Al-Bukhari & Muslim"
+    },
+    {
+      "id": 14,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Keluar Kamar Mandi / Toilet",
+      "arabic": "غُفْرَانَكَ الْحَمْدُ لِلّٰهِ الَّذِي أَذْهَبَ عَنِّي الْأَذَىٰ وَعَافَانِي",
+      "translation": "Aku memohon ampunan-Mu. Segala puji bagi Allah yang telah menghilangkan kotoran dariku dan menyehatkanku.",
+      "reference": "HR. Abu Dawud & Ibnu Majah"
+    },
+    {
+      "id": 15,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Berterima Kasih kepada Sesama",
+      "arabic": "جَزَاكَ اللّٰهُ خَيْرًا",
+      "translation": "Semoga Allah membalasmu dengan kebaikan yang berlimpah.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 16,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Ketika Bersin dan Mendengar Orang Bersin",
+      "arabic": "الْحَمْدُ لِلّٰهِ — يَرْحَمُكَ اللّٰهُ — يَهْدِيكُمُ اللّٰهُ وَيُصْلِحُ بَالَكُمْ",
+      "translation": "Yang bersin: Alhamdulillah (Segala puji bagi Allah). Yang mendengar: Yarhamukallah (Semoga Allah merahmatimu). Jawaban yang bersin: Yahdikumullahu wa yushlihu balakum (Semoga Allah memberi petunjuk dan memperbaiki keadaanmu).",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 17,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Memohon Tambahan Ilmu",
+      "arabic": "رَبِّ زِدْنِي عِلْمًا",
+      "translation": "Ya Tuhanku, tambahkanlah ilmu pengetahuan kepadaku.",
+      "reference": "QS. Thaha (20:114)"
+    },
+    {
+      "id": 18,
+      "category": "Wudu & Masjid",
+      "title": "Doa Sebelum Berwudu",
+      "arabic": "بِسْمِ اللّٰهِ وَالْحَمْدُ لِلّٰهِ",
+      "translation": "Dengan nama Allah dan segala puji bagi Allah.",
+      "reference": "Majma' az-Zawa'id"
+    },
+    {
+      "id": 19,
+      "category": "Wudu & Masjid",
+      "title": "Doa Saat Membasuh Anggota Wudu",
+      "arabic": "اللّٰهُمَّ اغْفِرْ لِي ذَنْبِي وَوَسِّعْ لِي فِي دَارِي وَبَارِكْ لِي فِي رِزْقِي",
+      "translation": "Ya Allah, ampunilah dosaku, lapangkanlah rumahku, dan berkahilah rezekiku.",
+      "reference": "HR. An-Nasa'i"
+    },
+    {
+      "id": 20,
+      "category": "Wudu & Masjid",
+      "title": "Doa Setelah Selesai Wudu",
+      "arabic": "أَشْهَدُ أَنْ لَّا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ، اللّٰهُمَّ اجْعَلْنِي مِنَ التَّوَّابِينَ وَاجْعَلْنِي مِنَ الْمُتَطَهِّرِينَ",
+      "translation": "Aku bersaksi tiada tuhan selain Allah semata tiada sekutu bagi-Nya, dan Muhammad adalah hamba serta utusan-Nya. Ya Allah, jadikanlah aku termasuk orang-orang yang bertobat dan menyucikan diri.",
+      "reference": "HR. Muslim & At-Tirmidzi"
+    },
+    {
+      "id": 21,
+      "category": "Wudu & Masjid",
+      "title": "Doa Masuk Masjid",
+      "arabic": "اللّٰهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+      "translation": "Ya Allah, bukakanlah untukku pintu-pintu rahmat-Mu.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 22,
+      "category": "Wudu & Masjid",
+      "title": "Doa Keluar Masjid",
+      "arabic": "اللّٰهُمَّ إِنِّي أَسْأَلُكَ مِنْ فَضْلِكَ",
+      "translation": "Ya Allah, sesungguhnya aku memohon sebagian dari karunia-Mu.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 23,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Setelah Minum Air",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي سَقَانَا عَذْبًا فُرَاتًا بِرَحْمَتِهِ وَلَمْ يَجْعَلْهُ مِلْحًا أُجَاجًا بِذُنُوبِنَا",
+      "translation": "Segala puji bagi Allah yang telah memberi kami minum air tawar yang segar dengan rahmat-Nya, dan tidak menjadikannya asin lagi pahit akibat dosa-dosa kami.",
+      "reference": "HR. Ath-Thabrani"
+    },
+    {
+      "id": 24,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Setelah Minum Susu",
+      "arabic": "اللّٰهُمَّ بَارِكْ لَنَا فِيهِ وَزِدْنَا مِنْهُ",
+      "translation": "Ya Allah, berkahilah minuman ini bagi kami dan tambahkanlah rezeki serupa kepada kami.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 25,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Memakai Pakaian",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي كَسَانِي هٰذَا وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِّنِّي وَلَا قُوَّةٍ",
+      "translation": "Segala puji bagi Allah yang telah memakaikan pakaian ini kepadaku dan mengaruniakannya tanpa daya dan kekuatan dariku.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 26,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Ketika Bercermin",
+      "arabic": "اللّٰهُمَّ أَنْتَ حَسَّنْتَ خَلْقِي فَحَسِّنْ خُلُقِي",
+      "translation": "Ya Allah, sebagaimana Engkau telah memperindah rupa fisikku, maka perindahlah pula akhlakku.",
+      "reference": "HR. Ahmad"
+    },
+    {
+      "id": 27,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Masuk Rumah",
+      "arabic": "اللّٰهُمَّ إِنِّي أَسْأَلُكَ خَيْرَ الْمَوْلِجِ وَخَيْرَ الْمَخْرَجِ، بِسْمِ اللّٰهِ وَلَجْنَا وَبِسْمِ اللّٰهِ خَرَجْنَا وَعَلَى اللّٰهِ رَبِّنَا تَوَكَّلْنَا",
+      "translation": "Ya Allah, aku memohon kebaikan saat masuk dan kebaikan saat keluar. Dengan nama Allah kami masuk, dengan nama Allah kami keluar, dan kepada Allah Tuhan kami bertawakal.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 28,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Keluar Rumah",
+      "arabic": "بِسْمِ اللّٰهِ تَوَكَّلْتُ عَلَى اللّٰهِ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللّٰهِ",
+      "translation": "Dengan nama Allah aku bertawakal kepada Allah; tiada daya dan kekuatan kecuali dengan pertolongan Allah.",
+      "reference": "HR. Abu Dawud & At-Tirmidzi"
+    },
+    {
+      "id": 29,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Melepas Orang Bepergian",
+      "arabic": "أَسْتَوْدِعُ اللّٰهَ دِينَكَ وَأَمَانَتَكَ وَخَوَاتِيمَ عَمَلِكَ",
+      "translation": "Aku titipkan kepada Allah agamamu, amanahmu, dan akhir dari seluruh amal perbuatanmu.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 30,
+      "category": "Alam & Cuaca",
+      "title": "Doa Ketika Turun Hujan",
+      "arabic": "اللّٰهُمَّ صَيِّبًا نَافِعًا",
+      "translation": "Ya Allah, turunkanlah hujan yang membawa manfaat dan keberkahan.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 31,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Mendengar Kabar Gembira",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي بِنِعْمَتِهِ تَتِمُّ الصَّالِحَاتُ",
+      "translation": "Segala puji bagi Allah yang dengan nikmat-Nya segala kebaikan menjadi sempurna.",
+      "reference": "HR. Ibnu Majah"
+    },
+    {
+      "id": 32,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Ketika Tertimpa Musibah atau Kehilangan",
+      "arabic": "إِنَّا لِلّٰهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ",
+      "translation": "Sesungguhnya kami milik Allah dan kepada-Nya pula kami akan kembali.",
+      "reference": "QS. Al-Baqarah (2:156)"
+    },
+    {
+      "id": 33,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Merasakan Sakit pada Tubuh",
+      "arabic": "بِسْمِ اللّٰهِ (٣) أَعُوذُ بِاللّٰهِ وَقُدْرَتِهِ مِنْ شَرِّ مَا أَجِدُ وَأُحَاذِرُ (٧)",
+      "translation": "Letakkan tangan pada bagian yang sakit, ucapkan Bismillah 3 kali, lalu baca 7 kali: Aku berlindung kepada Allah dan kekuasaan-Nya dari keburukan rasa sakit yang kurasakan dan kukhawatirkan.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 34,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Ketika Menghadapi Kesulitan",
+      "arabic": "حَسْبُنَا اللّٰهُ وَنِعْمَ الْوَكِيلُ",
+      "translation": "Cukuplah Allah menjadi penolong kami, dan Allah adalah sebaik-baik pelindung.",
+      "reference": "QS. Ali Imran (3:173)"
+    },
+    {
+      "id": 35,
+      "category": "Salat & Azan",
+      "title": "Takbir",
+      "arabic": "اللّٰهُ أَكْبَرُ",
+      "translation": "Allah Mahabesar.",
+      "reference": "Bacaan Salat"
+    },
+    {
+      "id": 36,
+      "category": "Salat & Azan",
+      "title": "Doa Iftitah (Tsana)",
+      "arabic": "سُبْحَانَكَ اللّٰهُمَّ وَبِحَمْدِكَ وَتَبَارَكَ اسْمُكَ وَتَعَالَىٰ جَدُّكَ وَلَا إِلٰهَ غَيْرُكَ",
+      "translation": "Mahasuci Engkau ya Allah dan segala puji bagi-Mu, mahaberkah nama-Mu, mahatinggi keagungan-Mu, dan tiada tuhan selain Engkau.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 37,
+      "category": "Salat & Azan",
+      "title": "Ta'awudz",
+      "arabic": "أَعُوذُ بِاللّٰهِ مِنَ الشَّيْطَانِ الرَّجِيمِ",
+      "translation": "Aku berlindung kepada Allah dari godaan setan yang terkutuk.",
+      "reference": "QS. An-Nahl (16:98)"
+    },
+    {
+      "id": 38,
+      "category": "Salat & Azan",
+      "title": "Basmalah",
+      "arabic": "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ",
+      "translation": "Dengan nama Allah Yang Maha Pengasih lagi Maha Penyayang.",
+      "reference": "QS. Al-Fatihah (1:1)"
+    },
+    {
+      "id": 39,
+      "category": "Salat & Azan",
+      "title": "Tasbih Rukuk",
+      "arabic": "سُبْحَانَ رَبِّيَ الْعَظِيمِ",
+      "translation": "Mahasuci Tuhanku Yang Mahaagung.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 40,
+      "category": "Salat & Azan",
+      "title": "Tasmi' (Bangkit dari Rukuk)",
+      "arabic": "سَمِعَ اللّٰهُ لِمَنْ حَمِدَهُ",
+      "translation": "Allah Maha Mendengar orang yang memuji-Nya.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 41,
+      "category": "Salat & Azan",
+      "title": "Doa I'tidal (1)",
+      "arabic": "رَبَّنَا وَلَكَ الْحَمْدُ",
+      "translation": "Ya Tuhan kami, hanya bagi-Mu segala pujian.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 42,
+      "category": "Salat & Azan",
+      "title": "Tasbih Sujud",
+      "arabic": "سُبْحَانَ رَبِّيَ الْأَعْلَىٰ",
+      "translation": "Mahasuci Tuhanku Yang Mahatinggi.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 43,
+      "category": "Salat & Azan",
+      "title": "Doa Duduk di Antara Dua Sujud",
+      "arabic": "اللّٰهُمَّ اغْفِرْ لِي وَارْحَمْنِي وَعَافِنِي وَاهْدِنِي وَارْزُقْنِي",
+      "translation": "Ya Allah, ampunilah aku, rahmatilah aku, sehatkanlah aku, berilah aku petunjuk, dan berilah aku rezeki.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 44,
+      "category": "Salat & Azan",
+      "title": "Tasyahud (At-Tahiyyat)",
+      "arabic": "التَّحِيَّاتُ لِلّٰهِ وَالصَّلَوَاتُ وَالطَّيِّبَاتُ، السَّلَامُ عَلَيْكَ أَيُّهَا النَّبِيُّ وَرَحْمَةُ اللّٰهِ وَبَرَكَاتُهُ، السَّلَامُ عَلَيْنَا وَعَلَىٰ عِبَادِ اللّٰهِ الصَّالِحِينَ، أَشْهَدُ أَنْ لَّا إِلٰهَ إِلَّا اللّٰهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ",
+      "translation": "Segala penghormatan, keberkahan, salat, dan kebaikan hanya milik Allah. Salam sejahtera semoga tercurah kepadamu wahai Nabi, beserta rahmat dan berkah Allah. Salam sejahtera semoga tercurah kepada kami dan hamba-hamba Allah yang saleh. Aku bersaksi tiada tuhan selain Allah, dan Muhammad adalah hamba serta utusan-Nya.",
+      "reference": "HR. Al-Bukhari & Muslim"
+    },
+    {
+      "id": 45,
+      "category": "Salat & Azan",
+      "title": "Selawat Ibrahimiyah",
+      "arabic": "اللّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ كَمَا صَلَّيْتَ عَلَىٰ إِبْرَاهِيمَ وَعَلَىٰ آلِ إِبْرَاهِيمَ إِنَّكَ حَمِيدٌ مَّجِيدٌ، اللّٰهُمَّ بَارِكْ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ كَمَا بَارَكْتَ عَلَىٰ إِبْرَاهِيمَ وَعَلَىٰ آلِ إِبْرَاهِيمَ إِنَّكَ حَمِيدٌ مَّجِيدٌ",
+      "translation": "Ya Allah, limpahkanlah rahmat kepada Nabi Muhammad dan keluarganya sebagaimana Engkau melimpahkan rahmat kepada Nabi Ibrahim dan keluarganya. Dan berkahilah Nabi Muhammad beserta keluarganya sebagaimana Engkau memberkahi Nabi Ibrahim beserta keluarganya. Sesungguhnya Engkau Maha Terpuji lagi Mahaagung.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 46,
+      "category": "Salat & Azan",
+      "title": "Doa Setelah Selawat Sebelum Salam",
+      "arabic": "اللّٰهُمَّ إِنِّي ظَلَمْتُ نَفْسِي ظُلْمًا كَثِيرًا وَلَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ فَاغْفِرْ لِي مَغْفِرَةً مِّنْ عِنْدِكَ وَارْحَمْنِي إِنَّكَ أَنْتَ الْغَفُورُ الرَّحِيمُ",
+      "translation": "Ya Allah, sungguh aku telah banyak menzalimi diriku sendiri, dan tiada yang dapat mengampuni dosa kecuali Engkau. Maka ampunilah aku dengan ampunan dari sisi-Mu dan rahmatilah aku; sesungguhnya Engkau Maha Pengampun lagi Maha Penyayang.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 47,
+      "category": "Salat & Azan",
+      "title": "Lafal Azan",
+      "arabic": "اللّٰهُ أَكْبَرُ (٤) أَشْهَدُ أَنْ لَّا إِلٰهَ إِلَّا اللّٰهُ (٢) أَشْهَدُ أَنَّ مُحَمَّدًا رَّسُولُ اللّٰهِ (٢) حَيَّ عَلَى الصَّلَاةِ (٢) حَيَّ عَلَى الْفَلَاحِ (٢) اللّٰهُ أَكْبَرُ (٢) لَا إِلٰهَ إِلَّا اللّٰهُ",
+      "translation": "Allah Mahabesar (4x). Aku bersaksi tiada tuhan selain Allah (2x). Aku bersaksi Muhammad utusan Allah (2x). Mari dirikan salat (2x). Mari raih kemenangan (2x). Allah Mahabesar (2x). Tiada tuhan selain Allah.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 48,
+      "category": "Salat & Azan",
+      "title": "Lafal Iqamah",
+      "arabic": "اللّٰهُ أَكْبَرُ (٤) أَشْهَدُ أَنْ لَّا إِلٰهَ إِلَّا اللّٰهُ (٢) أَشْهَدُ أَنَّ مُحَمَّدًا رَّسُولُ اللّٰهِ (٢) حَيَّ عَلَى الصَّلَاةِ (٢) حَيَّ عَلَى الْفَلَاحِ (٢) قَدْ قَامَتِ الصَّلَاةُ (٢) اللّٰهُ أَكْبَرُ (٢) لَا إِلٰهَ إِلَّا اللّٰهُ",
+      "translation": "Sama seperti lafal azan dengan tambahan 'Sungguh salat telah didirikan' (2 kali) sebelum takbir penutup.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 49,
+      "category": "Salat & Azan",
+      "title": "Doa Setelah Mendengar Azan",
+      "arabic": "اللّٰهُمَّ رَبَّ هٰذِهِ الدَّعْوَةِ التَّامَّةِ وَالصَّلَاةِ الْقَائِمَةِ آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ وَابْعَثْهُ مَقَامًا مَّحْمُودًا الَّذِي وَعَدْتَهُ إِنَّكَ لَا تُخْلِفُ الْمِيعَادَ",
+      "translation": "Ya Allah, Tuhan pemilik seruan yang sempurna ini dan salat yang akan didirikan, berikanlah kepada Nabi Muhammad wasilah dan keutamaan, serta bangkitkanlah beliau pada kedudukan terpuji yang telah Engkau janjikan; sungguh Engkau tidak pernah mengingkari janji.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 50,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Naik Kendaraan",
+      "arabic": "بِسْمِ اللّٰهِ الْحَمْدُ لِلّٰهِ سُبْحَانَ الَّذِي سَخَّرَ لَنَا هٰذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ وَإِنَّا إِلَىٰ رَبِّنَا لَمُنْقَلِبُونَ",
+      "translation": "Dengan nama Allah, segala puji bagi Allah. Mahasuci Tuhan yang telah menundukkan kendaraan ini bagi kami, padahal sebelumnya kami tidak mampu menguasainya, dan sungguh kami akan kembali kepada Tuhan kami.",
+      "reference": "QS. Az-Zukhruf (43:13-14)"
+    },
+    {
+      "id": 51,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Saat Kendaraan atau Kapal Mulai Bergerak",
+      "arabic": "بِسْمِ اللّٰهِ مَجْرِيهَا وَمُرْسَاهَا إِنَّ رَبِّي لَغَفُورٌ رَّحِيمٌ",
+      "translation": "Dengan nama Allah di waktu berlayar dan berlabuhnya; sesungguhnya Tuhanku Maha Pengampun lagi Maha Penyayang.",
+      "reference": "QS. Hud (11:41)"
+    },
+    {
+      "id": 52,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Pulang dari Bepergian",
+      "arabic": "آيِبُونَ تَائِبُونَ عَابِدُونَ لِرَبِّنَا حَامِدُونَ",
+      "translation": "Kami kembali dalam keadaan bertobat, beribadah, dan memuji Tuhan kami.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 53,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Masuk Kota atau Daerah Baru",
+      "arabic": "اللّٰهُمَّ بَارِكْ لَنَا فِيهَا (٣) اللّٰهُمَّ ارْزُقْنَا جَنَاهَا وَحَبِّبْنَا إِلَىٰ أَهْلِهَا وَحَبِّبْ صَالِحِي أَهْلِهَا إِلَيْنَا",
+      "translation": "Ya Allah, berkahilah kami di negeri ini (3x). Ya Allah, karuniakanlah kepada kami hasil buminya, cintakanlah kami kepada penduduknya, dan cintakanlah orang-orang saleh di antara penduduknya kepada kami.",
+      "reference": "HR. Ath-Thabrani"
+    },
+    {
+      "id": 54,
+      "category": "Salat & Azan",
+      "title": "Doa Qunut Witir",
+      "arabic": "اللّٰهُمَّ إِنَّا نَسْتَعِينُكَ وَنَسْتَغْفِرُكَ وَنُؤْمِنُ بِكَ وَنَتَوَكَّلُ عَلَيْكَ وَنُثْنِي عَلَيْكَ الْخَيْرَ وَنَشْكُرُكَ وَلَا نَكْفُرُكَ وَنَخْلَعُ وَنَتْرُكُ مَنْ يَّفْجُرُكَ، اللّٰهُمَّ إِيَّاكَ نَعْبُدُ وَلَكَ نُصَلِّي وَنَسْجُدُ وَإِلَيْكَ نَسْعَىٰ وَنَحْفِدُ وَنَرْجُو رَحْمَتَكَ وَنَخْشَىٰ عَذَابَكَ إِنَّ عَذَابَكَ بِالْكُفَّارِ مُلْحِقٌ",
+      "translation": "Ya Allah, kami memohon pertolongan dan ampunan-Mu, beriman dan bertawakal kepada-Mu, memuji serta bersyukur kepada-Mu tanpa mengingkari nikmat-Mu. Hanya kepada-Mu kami menyembah, salat, dan sujud; kami mengharap rahmat-Mu dan takut akan azab-Mu.",
+      "reference": "Mushannaf Ibnu Abi Syaibah"
+    },
+    {
+      "id": 55,
+      "category": "Salat & Azan",
+      "title": "Zikir Setelah Salat Witir",
+      "arabic": "سُبْحَانَ الْمَلِكِ الْقُدُّوسِ",
+      "translation": "Mahasuci Raja Yang Mahakudus. (Dibaca tiga kali dan dikeraskan suaranya pada bacaan ketiga).",
+      "reference": "HR. An-Nasa'i"
+    },
+    {
+      "id": 56,
+      "category": "Puasa & Ramadan",
+      "title": "Doa Melihat Bulan Sabit (Hilal)",
+      "arabic": "اللّٰهُمَّ أَهِلَّهُ عَلَيْنَا بِالْيُمْنِ وَالْإِيمَانِ وَالسَّلَامَةِ وَالْإِسْلَامِ، رَبِّي وَرَبُّكَ اللّٰهُ",
+      "translation": "Ya Allah, tampakkanlah hilal ini kepada kami dengan membawa keberkahan, keimanan, keselamatan, dan Islam. Tuhanku dan Tuhanmu (wahai bulan) adalah Allah.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 57,
+      "category": "Puasa & Ramadan",
+      "title": "Niat Puasa Ramadan (Sahur)",
+      "arabic": "وَبِصَوْمِ غَدٍ نَّوَيْتُ مِنْ شَهْرِ رَمَضَانَ",
+      "translation": "Aku berniat puasa esok hari untuk menunaikan kewajiban bulan Ramadan.",
+      "reference": "Niat Puasa"
+    },
+    {
+      "id": 58,
+      "category": "Puasa & Ramadan",
+      "title": "Doa Berbuka Puasa",
+      "arabic": "اللّٰهُمَّ لَكَ صُمْتُ وَبِكَ آمَنْتُ وَعَلَيْكَ تَوَكَّلْتُ وَعَلَىٰ رِزْقِكَ أَفْطَرْتُ",
+      "translation": "Ya Allah, karena-Mu aku berpuasa, kepada-Mu aku beriman, kepada-Mu aku bertawakal, dan dengan rezeki-Mu aku berbuka puasa.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 59,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa untuk Tuan Rumah Setelah Makan Jamuan (1)",
+      "arabic": "اللّٰهُمَّ بَارِكْ لَهُمْ فِيمَا رَزَقْتَهُمْ وَاغْفِرْ لَهُمْ وَارْحَمْهُمْ",
+      "translation": "Ya Allah, berkahilah rezeki yang Engkau karuniakan kepada mereka, ampunilah mereka, dan rahmatilah mereka.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 60,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Melihat Buah Pertama pada Musimnya",
+      "arabic": "اللّٰهُمَّ بَارِكْ لَنَا فِي ثَمَرِنَا وَبَارِكْ لَنَا فِي مَدِينَتِنَا وَبَارِكْ لَنَا فِي صَاعِنَا وَبَارِكْ لَنَا فِي مُدِّنَا",
+      "translation": "Ya Allah, berkahilah buah-buahan kami, berkahilah kota kami, serta berkahilah takaran dan timbangan kami.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 61,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Kesulitan Ekonomi & Terlilit Utang",
+      "arabic": "اللّٰهُمَّ اكْفِنِي بِحَلَالِكَ عَنْ حَرَامِكَ وَأَغْنِنِي بِفَضْلِكَ عَمَّنْ سِوَاكَ",
+      "translation": "Ya Allah, cukupkanlah aku dengan rezeki-Mu yang halal sehingga terhindar dari yang haram, dan kayakanlah aku dengan karunia-Mu sehingga tidak bergantung kepada selain-Mu.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 62,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Melihat Orang Tertimpa Musibah",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي عَافَانِي مِمَّا ابْتَلَاكَ بِهِ وَفَضَّلَنِي عَلَىٰ كَثِيرٍ مِّمَّنْ خَلَقَ تَفْضِيلًا",
+      "translation": "Segala puji bagi Allah yang telah menyelamatkanku dari cobaan yang menimpamu dan melebihkanku atas banyak makhluk-Nya. (Dibaca pelan di dalam hati).",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 63,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Ketika Demam",
+      "arabic": "بِسْمِ اللّٰهِ الْكَبِيرِ أَعُوذُ بِاللّٰهِ الْعَظِيمِ مِنْ شَرِّ كُلِّ عِرْقٍ نَّعَّارٍ وَمِنْ شَرِّ حَرِّ النَّارِ",
+      "translation": "Dengan nama Allah Yang Mahabesar, aku berlindung kepada Allah Yang Mahaagung dari keburukan setiap urat yang berdenyut dan dari panasnya api neraka.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 64,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Menjenguk Orang Sakit",
+      "arabic": "لَا بَأْسَ طَهُورٌ إِنْ شَاءَ اللّٰهُ، اللّٰهُمَّ اشْفِهِ اللّٰهُمَّ عَافِهِ",
+      "translation": "Tidak mengapa, semoga sakit ini menjadi penggugur dosa, insya Allah. Ya Allah sembuhkanlah dia, ya Allah sehatkanlah dia.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 65,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Saat Menghadapi Sakaratul Maut",
+      "arabic": "لَا إِلٰهَ إِلَّا اللّٰهُ مُحَمَّدٌ رَّسُولُ اللّٰهِ، اللّٰهُمَّ أَعِنِّي عَلَىٰ غَمَرَاتِ الْمَوْتِ وَسَكَرَاتِ الْمَوْتِ",
+      "translation": "Tiada tuhan selain Allah, Muhammad utusan Allah. Ya Allah, tolonglah aku menghadapi berat dan pedihnya sakaratul maut.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 66,
+      "category": "Jenazah & Akhirat",
+      "title": "Bacaan Tsana dalam Salat Jenazah",
+      "arabic": "سُبْحَانَكَ اللّٰهُمَّ وَبِحَمْدِكَ وَتَبَارَكَ اسْمُكَ وَتَعَالَىٰ جَدُّكَ وَجَلَّ ثَنَاؤُكَ وَلَا إِلٰهَ غَيْرُكَ",
+      "translation": "Mahasuci Engkau ya Allah dan segala puji bagi-Mu, mahaberkah nama-Mu, mahatinggi keagungan-Mu, mahaagung pujian-Mu, dan tiada tuhan selain Engkau.",
+      "reference": "Salat Jenazah"
+    },
+    {
+      "id": 67,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Salat Jenazah untuk Orang Dewasa",
+      "arabic": "اللّٰهُمَّ اغْفِرْ لِحَيِّنَا وَمَيِّتِنَا وَشَاهِدِنَا وَغَائِبِنَا وَصَغِيرِنَا وَكَبِيرِنَا وَذَكَرِنَا وَأُنْثَانَا، اللّٰهُمَّ مَنْ أَحْيَيْتَهُ مِنَّا فَأَحْيِهِ عَلَى الْإِسْلَامِ وَمَنْ تَوَفَّيْتَهُ مِنَّا فَتَوَفَّهُ عَلَى الْإِيمَانِ",
+      "translation": "Ya Allah, ampunilah orang yang hidup dan yang mati di antara kami, yang hadir dan yang tidak hadir, yang kecil dan yang besar, laki-laki maupun perempuan. Siapa yang Engkau hidupkan di antara kami, hidupkanlah di atas Islam; dan siapa yang Engkau wafatkan, wafatkanlah di atas iman.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 68,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Salat Jenazah untuk Anak Laki-laki",
+      "arabic": "اللّٰهُمَّ اجْعَلْهُ لَنَا فَرَطًا وَاجْعَلْهُ لَنَا أَجْرًا وَذُخْرًا وَاجْعَلْهُ لَنَا شَافِعًا وَمُشَفَّعًا",
+      "translation": "Ya Allah, jadikanlah ia sebagai pendahulu, pahala, dan simpanan bagi kami, serta jadikanlah ia pemberi syafaat yang diterima syafaatnya.",
+      "reference": "Al-Hidayah"
+    },
+    {
+      "id": 69,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Salat Jenazah untuk Anak Perempuan",
+      "arabic": "اللّٰهُمَّ اجْعَلْهَا لَنَا فَرَطًا وَاجْعَلْهَا لَنَا أَجْرًا وَذُخْرًا وَاجْعَلْهَا لَنَا شَافِعَةً وَمُشَفَّعَةً",
+      "translation": "Ya Allah, jadikanlah ia sebagai pendahulu, pahala, dan simpanan bagi kami, serta jadikanlah ia pemberi syafaat yang diterima syafaatnya.",
+      "reference": "Al-Hidayah"
+    },
+    {
+      "id": 70,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Masuk Area Pemakaman",
+      "arabic": "السَّلَامُ عَلَيْكُمْ أَهْلَ الدِّيَارِ مِنَ الْمُؤْمِنِينَ وَالْمُسْلِمِينَ وَإِنَّا إِنْ شَاءَ اللّٰهُ بِكُمْ لَاحِقُونَ، نَسْأَلُ اللّٰهَ لَنَا وَلَكُمُ الْعَافِيَةَ",
+      "translation": "Semoga keselamatan tercurah kepada kalian wahai penghuni kubur dari kalangan mukminin dan muslimin. Insya Allah kami akan menyusul kalian; kami memohon keselamatan kepada Allah untuk kami dan kalian.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 71,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Meletakkan Jenazah ke Liang Lahat",
+      "arabic": "بِسْمِ اللّٰهِ وَعَلَىٰ مِلَّةِ رَسُولِ اللّٰهِ",
+      "translation": "Dengan nama Allah dan di atas ajaran sunah Rasulullah saw.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 72,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Menaburkan Tanah ke Atas Kubur",
+      "arabic": "مِنْهَا خَلَقْنَاكُمْ (١) وَفِيهَا نُعِيدُكُمْ (٢) وَمِنْهَا نُخْرِجُكُمْ تَارَةً أُخْرَىٰ (٣)",
+      "translation": "Genggaman ke-1: Dari tanah Kami menciptakan kalian. Genggaman ke-2: Ke dalam tanah Kami mengembalikan kalian. Genggaman ke-3: Dan dari tanah Kami membangkitkan kalian sekali lagi.",
+      "reference": "QS. Thaha (20:55)"
+    },
+    {
+      "id": 73,
+      "category": "Keluarga & Doa Pilihan",
+      "title": "Doa untuk Kedua Orang Tua",
+      "arabic": "رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا",
+      "translation": "Ya Tuhanku, sayangilah kedua orang tuaku sebagaimana mereka menyayangi dan mendidikku di waktu kecil.",
+      "reference": "QS. Al-Isra (17:24)"
+    },
+    {
+      "id": 74,
+      "category": "Alam & Cuaca",
+      "title": "Doa Menjelang Matahari Terbenam (Magrib)",
+      "arabic": "اللّٰهُمَّ هٰذَا إِقْبَالُ لَيْلِكَ وَإِدْبَارُ نَهَارِكَ وَأَصْوَاتُ دُعَاتِكَ فَاغْفِرْ لِي",
+      "translation": "Ya Allah, inilah saat datangnya malam-Mu, berlalunya siang-Mu, dan berkumandangnya suara orang-orang yang berdoa kepada-Mu, maka ampunilah aku.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 75,
+      "category": "Alam & Cuaca",
+      "title": "Doa Ketika Melihat Bulan di Malam Gelap",
+      "arabic": "أَعُوذُ بِاللّٰهِ مِنْ شَرِّ هٰذَا الْغَاسِقِ",
+      "translation": "Aku berlindung kepada Allah dari keburukan malam yang gelap gulita ini.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 76,
+      "category": "Alam & Cuaca",
+      "title": "Doa Memohon Hujan Saat Kemarau",
+      "arabic": "اللّٰهُمَّ اسْقِنَا اللّٰهُمَّ أَغِثْنَا",
+      "translation": "Ya Allah, berilah kami air minum; ya Allah, turunkanlah hujan penolong bagi kami.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 77,
+      "category": "Alam & Cuaca",
+      "title": "Doa Ketika Hujan Terlalu Lebat",
+      "arabic": "اللّٰهُمَّ حَوَالَيْنَا وَلَا عَلَيْنَا، اللّٰهُمَّ عَلَى الْآكَامِ وَالظِّرَابِ وَبُطُونِ الْأَوْدِيَةِ وَمَنَابِتِ الشَّجَرِ",
+      "translation": "Ya Allah, turunkanlah hujan di sekitar kami dan jangan menjadi bencana bagi kami. Arahkanlah ke bukit-bukit, pegunungan, lembah, dan tempat tumbuhnya pepohonan.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 78,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Kafaratul Majelis (Penutup Pertemuan)",
+      "arabic": "سُبْحَانَكَ اللّٰهُمَّ وَبِحَمْدِكَ أَشْهَدُ أَنْ لَّا إِلٰهَ إِلَّا أَنْتَ أَسْتَغْفِرُكَ وَأَتُوبُ إِلَيْكَ",
+      "translation": "Mahasuci Engkau ya Allah dan segala puji bagi-Mu. Aku bersaksi tiada tuhan selain Engkau; aku memohon ampun dan bertobat kepada-Mu.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 79,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Masuk Pasar atau Pusat Perbelanjaan",
+      "arabic": "لَا إِلٰهَ إِلَّا اللّٰهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ يُحْيِي وَيُمِيتُ وَهُوَ حَيٌّ لَّا يَمُوتُ بِيَدِهِ الْخَيْرُ وَهُوَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ",
+      "translation": "Tiada tuhan selain Allah semata tiada sekutu bagi-Nya. Milik-Nya kerajaan dan segala pujian; Dia menghidupkan dan mematikan, Mahahidup tak pernah mati, di tangan-Nya segala kebaikan dan Dia Mahakuasa atas segala sesuatu.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 80,
+      "category": "Keluarga & Doa Pilihan",
+      "title": "99 Nama Indah Allah (Asmaul Husna)",
+      "arabic": "هُوَ اللّٰهُ الَّذِي لَا إِلٰهَ إِلَّا هُوَ الرَّحْمٰنُ الرَّحِيمُ الْمَلِكُ الْقُدُّوسُ السَّلَامُ الْمُؤْمِنُ الْمُهَيْمِنُ الْعَزِيزُ الْجَبَّارُ الْمُتَكَبِّرُ الْخَالِقُ الْبَارِئُ الْمُصَوِّرُ الْغَفَّارُ الْقَهَّارُ الْوَهَّابُ الرَّزَّاقُ الْفَتَّاحُ الْعَلِيمُ الْقَابِضُ الْبَاسِطُ الْخَافِضُ الرَّافِعُ الْمُعِزُّ الْمُذِلُّ السَّمِيعُ الْبَصِيرُ الْحَكَمُ الْعَدْلُ اللَّطِيفُ الْخَبِيرُ الْحَلِيمُ الْعَظِيمُ الْغَفُورُ الشَّكُورُ الْعَلِيُّ الْكَبِيرُ الْحَفِيظُ الْمُقِيتُ الْحَسِيبُ الْجَلِيلُ الْكَرِيمُ الرَّقِيبُ الْمُجِيبُ الْوَاسِعُ الْحَكِيمُ الْوَدُودُ الْمَجِيدُ الْبَاعِثُ الشَّهِيدُ الْحَقُّ الْوَكِيلُ الْقَوِيُّ الْمَتِينُ الْوَلِيُّ الْحَمِيدُ الْمُحْصِي الْمُبْدِئُ الْمُعِيدُ الْمُحْيِي الْمُمِيتُ الْحَيُّ الْقَيُّومُ الْوَاجِدُ الْمَاجِدُ الْوَاحِدُ الصَّمَدُ الْقَادِرُ الْمُقْتَدِرُ الْمُقَدِّمُ الْمُؤَخِّرُ الْأَوَّلُ الْآخِرُ الظَّاهِرُ الْبَاطِنُ الْوَالِي الْمُتَعَالِي الْبَرُّ التَّوَّابُ الْمُنْتَقِمُ الْعَفُوُّ الرَّءُوفُ مَالِكُ الْمُلْكِ ذُو الْجَلَالِ وَالْإِكْرَامِ الْمُقْسِطُ الْجَامِعُ الْغَنِيُّ الْمُغْنِي الْمَانِعُ الضَّارُّ النَّافِعُ النُّورُ الْهَادِي الْبَدِيعُ الْبَاقِي الْوَارِثُ الرَّشِيدُ الصَّبُورُ",
+      "translation": "Sembilan puluh sembilan nama Allah yang agung; barang siapa menghafal, memahami, dan mengamalkannya niscaya masuk surga.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 81,
+      "category": "Kurban & Momen Khusus",
+      "title": "Doa Saat Membaringkan Hewan Kurban",
+      "arabic": "إِنِّي وَجَّهْتُ وَجْهِيَ لِلَّذِي فَطَرَ السَّمَاوَاتِ وَالْأَرْضَ حَنِيفًا وَمَا أَنَا مِنَ الْمُشْرِكِينَ، إِنَّ صَلَاتِي وَنُسُكِي وَمَحْيَايَ وَمَمَاتِي لِلّٰهِ رَبِّ الْعَالَمِينَ لَا شَرِيكَ لَهُ وَبِذٰلِكَ أُمِرْتُ وَأَنَا مِنَ الْمُسْلِمِينَ، اللّٰهُمَّ مِنْكَ وَلَكَ",
+      "translation": "Sesungguhnya aku menghadapkan wajahku kepada Tuhan pencipta langit dan bumi dengan lurus, dan salat, ibadah kurban, hidup, serta matiku hanya untuk Allah Tuhan semesta alam. Ya Allah, kurban ini dari-Mu dan untuk-Mu.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 82,
+      "category": "Kurban & Momen Khusus",
+      "title": "Doa Menyembelih Hewan",
+      "arabic": "بِسْمِ اللّٰهِ اللّٰهُ أَكْبَرُ",
+      "translation": "Dengan nama Allah, Allah Mahabesar.",
+      "reference": "HR. Al-Bukhari & Muslim"
+    },
+    {
+      "id": 83,
+      "category": "Perlindungan & Istigfar",
+      "title": "Sayyidul Istigfar (Penghulu Istigfar)",
+      "arabic": "اللّٰهُمَّ أَنْتَ رَبِّي لَا إِلٰهَ إِلَّا أَنْتَ خَلَقْتَنِي وَأَنَا عَبْدُكَ وَأَنَا عَلَىٰ عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ",
+      "translation": "Ya Allah, Engkau Tuhanku, tiada tuhan selain Engkau. Engkau menciptakanku dan aku hamba-Mu; aku berpegang pada janji-Mu semampuku. Aku berlindung dari keburukan perbuatanku, mengakui nikmat-Mu dan dosaku, maka ampunilah aku karena tiada yang mengampuni dosa selain Engkau.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 84,
+      "category": "Keluarga & Doa Pilihan",
+      "title": "Doa Salat Istikharah",
+      "arabic": "اللّٰهُمَّ إِنِّي أَسْتَخِيرُكَ بِعِلْمِكَ وَأَسْتَقْدِرُكَ بِقُدْرَتِكَ وَأَسْأَلُكَ مِنْ فَضْلِكَ الْعَظِيمِ فَإِنَّكَ تَقْدِرُ وَلَا أَقْدِرُ وَتَعْلَمُ وَلَا أَعْلَمُ وَأَنْتَ عَلَّامُ الْغُيُوبِ، اللّٰهُمَّ إِنْ كُنْتَ تَعْلَمُ أَنَّ هٰذَا الْأَمْرَ خَيْرٌ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمْرِي فَاقْدُرْهُ لِي وَيَسِّرْهُ لِي ثُمَّ بَارِكْ لِي فِيهِ، وَإِنْ كُنْتَ تَعْلَمُ أَنَّ هٰذَا الْأَمْرَ شَرٌّ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمْرِي فَاصْرِفْهُ عَنِّي وَاصْرِفْنِي عَنْهُ وَاقْدُرْ لِيَ الْخَيْرَ حَيْثُ كَانَ ثُمَّ أَرْضِنِي بِهِ",
+      "translation": "Ya Allah, aku memohon pilihan terbaik dengan ilmu-Mu dan kemampuan dengan kekuasaan-Mu. Jika urusan ini baik bagi agama, kehidupan, dan akhir urusanku, takdirkanlah dan mudahkanlah bagiku; namun jika buruk, jauhkanlah dariku dan takdirkan kebaikan di mana pun berada.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 85,
+      "category": "Keluarga & Doa Pilihan",
+      "title": "Doa Paling Komprehensif (Mencakup Semua Kebaikan)",
+      "arabic": "اللّٰهُمَّ إِنَّا نَسْأَلُكَ مِنْ خَيْرِ مَا سَأَلَكَ مِنْهُ نَبِيُّكَ مُحَمَّدٌ صَلَّى اللّٰهُ عَلَيْهِ وَسَلَّمَ وَنَعُوذُ بِكَ مِنْ شَرِّ مَا اسْتَعَاذَ مِنْهُ نَبِيُّكَ مُحَمَّدٌ صَلَّى اللّٰهُ عَلَيْهِ وَسَلَّمَ وَأَنْتَ الْمُسْتَعَانُ وَعَلَيْكَ الْبَلَاغُ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللّٰهِ",
+      "translation": "Ya Allah, kami memohon kepada-Mu segala kebaikan yang diminta Nabi-Mu Muhammad saw., dan kami berlindung dari segala keburukan yang beliau mintakan perlindungan darinya.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 86,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Ketika Marah",
+      "arabic": "أَعُوذُ بِاللّٰهِ مِنَ الشَّيْطَانِ الرَّجِيمِ",
+      "translation": "Aku berlindung kepada Allah dari godaan setan yang terkutuk.",
+      "reference": "HR. Al-Bukhari & Muslim"
+    },
+    {
+      "id": 87,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Ketika Mendengar Anjing Menggonggong di Malam Hari",
+      "arabic": "أَعُوذُ بِاللّٰهِ مِنَ الشَّيْطَانِ الرَّجِيمِ",
+      "translation": "Aku berlindung kepada Allah dari gangguan setan yang terkutuk.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 88,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Ketika Mendengar Suara Keledai",
+      "arabic": "أَعُوذُ بِاللّٰهِ مِنَ الشَّيْطَانِ الرَّجِيمِ",
+      "translation": "Aku berlindung kepada Allah dari godaan setan yang terkutuk.",
+      "reference": "HR. Al-Bukhari & Muslim"
+    },
+    {
+      "id": 89,
+      "category": "Perjalanan & Majelis",
+      "title": "Ucapan Selamat Datang kepada Tamu",
+      "arabic": "أَهْلًا وَسَهْلًا وَمَرْحَبًا",
+      "translation": "Selamat datang di tengah keluarga sendiri, silakan merasa nyaman dan lapang.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 90,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Ucapan Saat Berencana Melakukan Sesuatu",
+      "arabic": "إِنْ شَاءَ اللّٰهُ",
+      "translation": "Jika Allah menghendaki.",
+      "reference": "QS. Al-Kahf (18:24)"
+    },
+    {
+      "id": 91,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Pagi dan Petang",
+      "arabic": "اللّٰهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ",
+      "translation": "Ya Allah, dengan rahmat-Mu kami memasuki pagi dan petang; dengan-Mu kami hidup, dengan-Mu kami mati, dan kepada-Mu tempat kembali.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 92,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Sebelum Tidur (2)",
+      "arabic": "اللّٰهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ",
+      "translation": "Ya Allah, lindungilah aku dari azab-Mu pada hari Engkau membangkitkan seluruh hamba-Mu.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 93,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Ketika Melihat Sesama Muslim Tertawa",
+      "arabic": "أَضْحَكَ اللّٰهُ سِنَّكَ",
+      "translation": "Semoga Allah senantiasa membuatmu tersenyum dan berbahagia.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 94,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Makan Bersama Orang yang Sakit",
+      "arabic": "بِسْمِ اللّٰهِ ثِقَةً بِاللّٰهِ وَتَوَكُّلًا عَلَيْهِ",
+      "translation": "Dengan nama Allah, penuh keyakinan kepada Allah dan bertawakal kepada-Nya.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 95,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Melihat Hal yang Menyenangkan",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي بِنِعْمَتِهِ تَتِمُّ الصَّالِحَاتُ",
+      "translation": "Segala puji bagi Allah yang dengan nikmat-Nya segala kebaikan terlaksana.",
+      "reference": "HR. Ibnu Majah"
+    },
+    {
+      "id": 96,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Ketika Terlintas Bisikan Buruk di Hati",
+      "arabic": "أَعُوذُ بِاللّٰهِ مِنَ الشَّيْطَانِ الرَّجِيمِ، آمَنْتُ بِاللّٰهِ وَرُسُلِهِ",
+      "translation": "Aku berlindung kepada Allah dari godaan setan yang terkutuk; aku beriman kepada Allah dan para rasul-Nya.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 97,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Tertimpa Musibah",
+      "arabic": "اللّٰهُمَّ أْجُرْنِي فِي مُصِيبَتِي وَأَخْلِفْ لِي خَيْرًا مِّنْهَا",
+      "translation": "Ya Allah, berilah aku pahala atas musibah yang menimpaku ini dan gantilah untukku dengan yang lebih baik darinya.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 98,
+      "category": "Jenazah & Akhirat",
+      "title": "Doa Keteguhan Iman dan Husnul Khatimah",
+      "arabic": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِنْ لَّدُنْكَ رَحْمَةً إِنَّكَ أَنْتَ الْوَهَّابُ",
+      "translation": "Ya Tuhan kami, janganlah Engkau condongkan hati kami kepada kesesatan setelah Engkau beri petunjuk kepada kami, dan karuniakanlah rahmat dari sisi-Mu; sungguh Engkau Maha Pemberi.",
+      "reference": "QS. Ali Imran (3:8)"
+    },
+    {
+      "id": 99,
+      "category": "Salat & Azan",
+      "title": "Doa I'tidal (2)",
+      "arabic": "رَبَّنَا وَلَكَ الْحَمْدُ حَمْدًا كَثِيرًا طَيِّبًا مُّبَارَكًا فِيهِ",
+      "translation": "Ya Tuhan kami, bagi-Mu segala pujian yang banyak, suci, dan penuh keberkahan di dalamnya.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 100,
+      "category": "Alam & Cuaca",
+      "title": "Doa Ketika Matahari Terbit",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي أَقَالَنَا يَوْمَنَا هٰذَا وَلَمْ يُهْلِكْنَا بِذُنُوبِنَا",
+      "translation": "Segala puji bagi Allah yang telah menganugerahkan hari baru ini kepada kami dan tidak membinasakan kami karena dosa-dosa kami.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 101,
+      "category": "Puasa & Ramadan",
+      "title": "Doa Setelah Berbuka Puasa",
+      "arabic": "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللّٰهُ",
+      "translation": "Telah hilang rasa haus, urat-urat telah basah, dan pahala telah ditetapkan, insya Allah.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 102,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Memakai Pakaian Baru",
+      "arabic": "الْحَمْدُ لِلّٰهِ الَّذِي كَسَانِي مَا أُوَارِي بِهِ عَوْرَتِي وَأَتَجَمَّلُ بِهِ فِي حَيَاتِي",
+      "translation": "Segala puji bagi Allah yang telah memakaikan kepadaku pakaian untuk menutup aurat dan memperindah diriku dalam hidupku.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 103,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa untuk Tuan Rumah Setelah Makan Jamuan (2)",
+      "arabic": "أَكَلَ طَعَامَكُمُ الْأَبْرَارُ وَصَلَّتْ عَلَيْكُمُ الْمَلَائِكَةُ وَأَفْطَرَ عِنْدَكُمُ الصَّائِمُونَ",
+      "translation": "Semoga orang-orang saleh memakan hidangan kalian, para malaikat mendoakan rahmat bagi kalian, dan orang-orang berpuasa berbuka di tempat kalian.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 104,
+      "category": "Perjalanan & Majelis",
+      "title": "Doa Memulai Perjalanan Jauh (Safar)",
+      "arabic": "اللّٰهُ أَكْبَرُ (٣) سُبْحَانَ الَّذِي سَخَّرَ لَنَا هٰذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ وَإِنَّا إِلَىٰ رَبِّنَا لَمُنْقَلِبُونَ، اللّٰهُمَّ إِنَّا نَسْأَلُكَ فِي سَفَرِنَا هٰذَا الْبِرَّ وَالتَّقْوَىٰ وَمِنَ الْعَمَلِ مَا تَرْضَىٰ، اللّٰهُمَّ هَوِّنْ عَلَيْنَا سَفَرَنَا هٰذَا وَاطْوِ عَنَّا بُعْدَهُ، اللّٰهُمَّ أَنْتَ الصَّاحِبُ فِي السَّفَرِ وَالْخَلِيفَةُ فِي الْأَهْلِ، اللّٰهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ وَعْثَاءِ السَّفَرِ وَكَآبَةِ الْمَنْظَرِ وَسُوءِ الْمُنْقَلَبِ فِي الْمَالِ وَالْأَهْلِ",
+      "translation": "Allah Mahabesar (3x). Mahasuci Tuhan yang menundukkan kendaraan ini bagi kami. Ya Allah, kami memohon kebaikan, takwa, dan amal yang Engkau ridai dalam perjalanan ini. Mudahkanlah perjalanan kami dan dekatkanlah jaraknya; Engkaulah pendamping dalam perjalanan dan penjaga keluarga yang ditinggalkan.",
+      "reference": "HR. Muslim"
+    },
+    {
+      "id": 105,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Perlindungan Agama, Jiwa, Keluarga & Harta",
+      "arabic": "بِسْمِ اللّٰهِ عَلَىٰ دِينِي وَنَفْسِي وَوَلَدِي وَأَهْلِي وَمَالِي",
+      "translation": "Dengan nama Allah atas agamaku, diriku, anak-anakku, keluargaku, dan hartaku. (Dibaca 3 kali pagi dan petang).",
+      "reference": "Kanz al-Ummal"
+    },
+    {
+      "id": 106,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Perlindungan dari Segala Bahaya Mendadak",
+      "arabic": "بِسْمِ اللّٰهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ",
+      "translation": "Dengan nama Allah yang bersama nama-Nya tidak ada sesuatu pun di bumi maupun di langit yang dapat membahayakan, dan Dia Maha Mendengar lagi Maha Mengetahui. (Dibaca 3 kali pagi dan petang).",
+      "reference": "HR. Abu Dawud & At-Tirmidzi"
+    },
+    {
+      "id": 107,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Meraih Rida Allah pada Hari Kiamat",
+      "arabic": "رَضِيتُ بِاللّٰهِ رَبًّا وَبِالْإِسْلَامِ دِينًا وَبِمُحَمَّدٍ صَلَّى اللّٰهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا",
+      "translation": "Aku rida Allah sebagai Tuhanku, Islam sebagai agamaku, dan Nabi Muhammad saw. sebagai nabiku. (Dibaca 3 kali setelah Subuh dan Magrib).",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 108,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Terbebas dari Kegelisahan dan Lilitan Utang",
+      "arabic": "اللّٰهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ وَأَعُوذُ بِكَ مِنَ الْعَجْزِ وَالْكَسَلِ وَأَعُوذُ بِكَ مِنَ الْجُبْنِ وَالْبُخْلِ وَأَعُوذُ بِكَ مِنْ غَلَبَةِ الدَّيْنِ وَقَهْرِ الرِّجَالِ",
+      "translation": "Ya Allah, aku berlindung kepada-Mu dari rasa gelisah dan sedih, dari kelemahan dan kemalasan, dari sifat pengecut dan kikir, serta dari beban utang dan penindasan orang lain.",
+      "reference": "HR. Abu Dawud"
+    },
+    {
+      "id": 109,
+      "category": "Aktivitas Harian & Rumah",
+      "title": "Doa Sebelum Tidur (3)",
+      "arabic": "بِاسْمِكَ رَبِّي وَضَعْتُ جَنْبِي وَبِكَ أَرْفَعُهُ إِنْ أَمْسَكْتَ نَفْسِي فَارْحَمْهَا وَإِنْ أَرْسَلْتَهَا فَاحْفَظْهَا بِمَا تَحْفَظُ بِهِ عِبَادَكَ الصَّالِحِينَ",
+      "translation": "Dengan nama-Mu wahai Tuhanku aku baringkan tubuhku dan dengan nama-Mu aku mengangkatnya. Jika Engkau menahan jiwaku (mewafatkanku), rahmatilah ia; dan jika Engkau melepaskannya, jagalah ia sebagaimana Engkau menjaga hamba-hamba-Mu yang saleh.",
+      "reference": "HR. Al-Bukhari"
+    },
+    {
+      "id": 110,
+      "category": "Alam & Cuaca",
+      "title": "Doa Ketika Mendengar Petir / Halilintar",
+      "arabic": "اللّٰهُمَّ لَا تَقْتُلْنَا بِغَضَبِكَ وَلَا تُهْلِكْنَا بِعَذَابِكَ وَعَافِنَا قَبْلَ ذٰلِكَ",
+      "translation": "Ya Allah, janganlah Engkau mematikan kami dengan murka-Mu, janganlah membinasakan kami dengan azab-Mu, dan selamatkanlah kami sebelum itu terjadi.",
+      "reference": "HR. At-Tirmidzi"
+    },
+    {
+      "id": 111,
+      "category": "Kesulitan & Kesehatan",
+      "title": "Doa Saat Mengalami Hal yang Kurang Disukai",
+      "arabic": "الْحَمْدُ لِلّٰهِ عَلَىٰ كُلِّ حَالٍ",
+      "translation": "Segala puji bagi Allah dalam setiap keadaan.",
+      "reference": "HR. Ibnu Majah"
+    },
+    {
+      "id": 112,
+      "category": "Perlindungan & Istigfar",
+      "title": "Bacaan Saat Terjadi Kebakaran",
+      "arabic": "اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ اللّٰهُ أَكْبَرُ",
+      "translation": "Allah Mahabesar, Allah Mahabesar, Allah Mahabesar.",
+      "reference": "HR. Ath-Thabrani"
+    },
+    {
+      "id": 113,
+      "category": "Perlindungan & Istigfar",
+      "title": "Doa Perlindungan Menyeluruh Abu Darda r.a.",
+      "arabic": "اللّٰهُمَّ أَنْتَ رَبِّي لَا إِلٰهَ إِلَّا أَنْتَ عَلَيْكَ تَوَكَّلْتُ وَأَنْتَ رَبُّ الْعَرْشِ الْعَظِيمِ، مَا شَاءَ اللّٰهُ كَانَ وَمَا لَمْ يَشَأْ لَمْ يَكُنْ وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللّٰهِ الْعَلِيِّ الْعَظِيمِ، أَعْلَمُ أَنَّ اللّٰهَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ وَأَنَّ اللّٰهَ قَدْ أَحَاطَ بِكُلِّ شَيْءٍ عِلْمًا، اللّٰهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ شَرِّ نَفْسِي وَمِنْ شَرِّ كُلِّ دَابَّةٍ أَنْتَ آخِذٌ بِنَاصِيَتِهَا إِنَّ رَبِّي عَلَىٰ صِرَاطٍ مُّسْتَقِيمٍ",
+      "translation": "Ya Allah, Engkau Tuhanku, tiada tuhan selain Engkau. Kepada-Mu aku bertawakal dan Engkau Tuhan Arasy yang agung. Apa yang dikehendaki Allah pasti terjadi, dan apa yang tidak dikehendaki-Nya tidak akan terjadi. Aku berlindung kepada-Mu dari keburukan diriku dan keburukan setiap makhluk melata yang berada dalam genggaman-Mu.",
+      "reference": "Al-Adzkar (Imam An-Nawawi)"
+    },
+    {
+      "id": 114,
+      "category": "Kurban & Momen Khusus",
+      "title": "Doa Setelah Menyembelih Hewan Kurban",
+      "arabic": "اللّٰهُمَّ تَقَبَّلْهُ مِنِّي كَمَا تَقَبَّلْتَ مِنْ حَبِيبِكَ مُحَمَّدٍ وَخَلِيلِكَ إِبْرَاهِيمَ عَلَيْهِمَا الصَّلَاةُ وَالسَّلَامُ",
+      "translation": "Ya Allah, terimalah kurban ini dariku sebagaimana Engkau menerimanya dari kekasih-Mu Nabi Muhammad dan sahabat-Mu Nabi Ibrahim a.s.",
+      "reference": "Doa Kurban"
+    },
+    {
+      "id": 115,
+      "category": "Kurban & Momen Khusus",
+      "title": "Doa Khatam Al-Qur'an",
+      "arabic": "اللّٰهُمَّ آنِسْ وَحْشَتِي فِي قَبْرِي، اللّٰهُمَّ ارْحَمْنِي بِالْقُرْآنِ الْعَظِيمِ وَاجْعَلْهُ لِي إِمَامًا وَنُورًا وَهُدًى وَرَحْمَةً، اللّٰهُمَّ ذَكِّرْنِي مِنْهُ مَا نَسِيتُ وَعَلِّمْنِي مِنْهُ مَا جَهِلْتُ وَارْزُقْنِي تِلَاوَتَهُ آنَاءَ اللَّيْلِ وَأَطْرَافَ النَّهَارِ وَاجْعَلْهُ لِي حُجَّةً يَا رَبَّ الْعَالَمِينَ",
+      "translation": "Ya Allah, tenteramkanlah kesendirianku di alam kubur. Rahmatilah aku dengan Al-Qur'an yang agung dan jadikanlah ia bagiku pemimpin, cahaya, petunjuk, serta rahmat. Ingatkanlah aku bagian yang terlupa, ajarkan yang tidak kuketahui, karuniakan aku membacanya siang dan malam, dan jadikanlah ia pembelaku wahai Tuhan semesta alam.",
+      "reference": "Doa Khatam Al-Qur'an"
+    }
+  ]
+}
